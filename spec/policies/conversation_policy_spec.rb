@@ -69,5 +69,34 @@ RSpec.describe ConversationPolicy, type: :policy do
         expect(subject).not_to permit(agent_context, conversation)
       end
     end
+
+    context 'when team restriction is enabled' do
+      let(:inbox) { create(:inbox, account: account) }
+      let(:team) { create(:team, account: account) }
+
+      before do
+        account.update!(settings: { restrict_conversations_by_team: true })
+        create(:inbox_member, user: agent, inbox: inbox)
+      end
+
+      it 'denies access to conversations from accessible inboxes without team access' do
+        restricted_conversation = create(:conversation, account: account, inbox: inbox)
+
+        expect(subject).not_to permit(agent_context, restricted_conversation)
+      end
+
+      it 'allows access to conversations assigned directly to the agent' do
+        assigned_conversation = create(:conversation, account: account, inbox: inbox, assignee: agent)
+
+        expect(subject).to permit(agent_context, assigned_conversation)
+      end
+
+      it 'allows access to conversations assigned to the agent team' do
+        create(:team_member, user: agent, team: team)
+        team_conversation = create(:conversation, account: account, inbox: inbox, team: team)
+
+        expect(subject).to permit(agent_context, team_conversation)
+      end
+    end
   end
 end

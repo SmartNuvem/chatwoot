@@ -14,6 +14,8 @@ class ConversationPolicy < ApplicationPolicy
   private
 
   def agent_can_view_conversation?
+    return restricted_team_access? if account&.restrict_conversations_by_team?
+
     inbox_access? || team_access?
   end
 
@@ -33,6 +35,10 @@ class ConversationPolicy < ApplicationPolicy
     return false if record.team_id.blank?
 
     user.teams.where(account_id: account&.id).exists?(id: record.team_id)
+  end
+
+  def restricted_team_access?
+    assigned_to_user? || team_access?
   end
 
   def assigned_to_user?

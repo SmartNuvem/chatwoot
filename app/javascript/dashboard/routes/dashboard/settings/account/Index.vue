@@ -9,6 +9,7 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import WithLabel from 'v3/components/Form/WithLabel.vue';
 import NextInput from 'next/input/Input.vue';
+import Switch from 'next/switch/Switch.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import AccountId from './components/AccountId.vue';
@@ -28,6 +29,7 @@ export default {
     SectionLayout,
     WithLabel,
     NextInput,
+    Switch,
   },
   setup() {
     const { updateUISettings, uiSettings } = useUISettings();
@@ -44,6 +46,7 @@ export default {
       locale: 'en',
       domain: '',
       supportEmail: '',
+      restrictConversationsByTeam: false,
       features: {},
     };
   },
@@ -110,7 +113,7 @@ export default {
   methods: {
     async initializeAccount() {
       try {
-        const { name, locale, id, domain, support_email, features } =
+        const { name, locale, id, domain, support_email, features, settings } =
           this.getAccount(this.accountId);
 
         const effectiveLocale = this.uiSettings?.locale || locale;
@@ -122,6 +125,8 @@ export default {
         this.id = id;
         this.domain = domain;
         this.supportEmail = support_email;
+        this.restrictConversationsByTeam =
+          !!settings?.restrict_conversations_by_team;
         this.features = features;
       } catch (error) {
         // Ignore error
@@ -140,6 +145,7 @@ export default {
           name: this.name,
           domain: this.domain,
           support_email: this.supportEmail,
+          restrict_conversations_by_team: this.restrictConversationsByTeam,
         });
         // If user locale is set, update the locale with user locale
         const updatedLocale = this.uiSettings?.locale || this.locale;
@@ -150,6 +156,26 @@ export default {
         useAlert(this.$t('GENERAL_SETTINGS.UPDATE.SUCCESS'));
       } catch (error) {
         useAlert(this.$t('GENERAL_SETTINGS.UPDATE.ERROR'));
+      }
+    },
+
+    async updateConversationVisibilityRestriction() {
+      try {
+        await this.$store.dispatch('accounts/update', {
+          restrict_conversations_by_team: this.restrictConversationsByTeam,
+          options: { silent: true },
+        });
+        useAlert(
+          this.$t(
+            'GENERAL_SETTINGS.FORM.RESTRICT_CONVERSATIONS_BY_TEAM.API.SUCCESS'
+          )
+        );
+      } catch (error) {
+        useAlert(
+          this.$t(
+            'GENERAL_SETTINGS.FORM.RESTRICT_CONVERSATIONS_BY_TEAM.API.ERROR'
+          )
+        );
       }
     },
   },
@@ -247,6 +273,23 @@ export default {
 
       <woot-loading-state v-if="uiFlags.isFetchingItem" />
     </div>
+    <SectionLayout
+      v-if="!uiFlags.isFetchingItem"
+      :title="$t('GENERAL_SETTINGS.FORM.RESTRICT_CONVERSATIONS_BY_TEAM.TITLE')"
+      :description="
+        $t('GENERAL_SETTINGS.FORM.RESTRICT_CONVERSATIONS_BY_TEAM.NOTE')
+      "
+      with-border
+    >
+      <template #headerActions>
+        <div class="flex justify-end">
+          <Switch
+            v-model="restrictConversationsByTeam"
+            @change="updateConversationVisibilityRestriction"
+          />
+        </div>
+      </template>
+    </SectionLayout>
     <AudioTranscription v-if="showAudioTranscriptionConfig" />
     <AccountId />
     <div v-if="!uiFlags.isFetchingItem && isOnChatwootCloud">

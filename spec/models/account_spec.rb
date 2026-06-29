@@ -3,6 +3,12 @@
 require 'rails_helper'
 
 RSpec.describe Account do
+  describe '#restrict_conversations_by_team?' do
+    it 'defaults to false' do
+      expect(described_class.new.restrict_conversations_by_team?).to be false
+    end
+  end
+
   it { is_expected.to have_many(:users).through(:account_users) }
   it { is_expected.to have_many(:account_users) }
   it { is_expected.to have_many(:inboxes).dependent(:destroy_async) }
