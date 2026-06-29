@@ -107,6 +107,8 @@ const inboxesList = useMapGetter('inboxes/getInboxes');
 const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
 const currentAccountId = useMapGetter('getCurrentAccountId');
+const currentRole = useMapGetter('getCurrentRole');
+const myTeams = useMapGetter('teams/getMyTeams');
 // We can't useFunctionGetter here since it needs to be called on setup?
 const getTeamFn = useMapGetter('teams/getTeam');
 const getConversationById = useMapGetter('getConversationById');
@@ -264,6 +266,21 @@ const activeTeam = computed(() => {
     return getTeamFn.value(props.teamId);
   }
   return {};
+});
+
+const currentAccount = computed(
+  () => store.getters['accounts/getAccount'](currentAccountId.value) || {}
+);
+
+const isTeamConversationRestrictionActive = computed(() => {
+  return (
+    !!currentAccount.value.settings?.restrict_conversations_by_team &&
+    currentRole.value !== 'administrator'
+  );
+});
+
+const showNoTeamEmptyState = computed(() => {
+  return isTeamConversationRestrictionActive.value && !myTeams.value.length;
 });
 
 const pageTitle = computed(() => {
@@ -936,7 +953,13 @@ watch(conversationFilters, (newVal, oldVal) => {
     />
 
     <p
-      v-if="!chatListLoading && !conversationList.length"
+      v-if="!chatListLoading && showNoTeamEmptyState"
+      class="flex overflow-auto justify-center items-center p-4 text-center"
+    >
+      {{ $t('CHAT_LIST.LIST.NO_TEAMS') }}
+    </p>
+    <p
+      v-else-if="!chatListLoading && !conversationList.length"
       class="flex overflow-auto justify-center items-center p-4"
     >
       {{ $t('CHAT_LIST.LIST.404') }}

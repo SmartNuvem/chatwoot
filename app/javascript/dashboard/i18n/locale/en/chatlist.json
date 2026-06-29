@@ -4,7 +4,8 @@
     "LOAD_MORE_CONVERSATIONS": "Load more conversations",
     "EOF": "All conversations loaded 🎉",
     "LIST": {
-      "404": "There are no active conversations in this group."
+      "404": "There are no active conversations in this group.",
+      "NO_TEAMS": "You do not belong to any team yet. Ask an administrator to add you to a support team."
     },
     "FAILED_TO_SEND": "Failed to send",
     "TAB_HEADING": "Conversations",

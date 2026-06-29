@@ -104,6 +104,14 @@
           "ERROR": "Falha ao atualizar configuração de transcrição de áudio"
         }
       },
+      "RESTRICT_CONVERSATIONS_BY_TEAM": {
+        "TITLE": "Restringir visualização de conversas por time",
+        "NOTE": "Quando ativado, agentes comuns verão apenas conversas atribuídas aos times dos quais fazem parte. Administradores continuam vendo todas as conversas.",
+        "API": {
+          "SUCCESS": "Configuração de visualização de conversas atualizada com sucesso",
+          "ERROR": "Falha ao atualizar configuração de visualização de conversas"
+        }
+      },
       "AUTO_RESOLVE_DURATION": {
         "LABEL": "Tempo de inatividade para resolução",
         "HELP": "Tempo de inatividade após o qual a conversa deve ser encerrada automaticamente",

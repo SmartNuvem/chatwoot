@@ -106,7 +106,7 @@
       },
       "RESTRICT_CONVERSATIONS_BY_TEAM": {
         "TITLE": "Restrict conversation visibility by team",
-        "NOTE": "When enabled, regular agents will only see conversations assigned to teams they are part of. Administrators continue seeing all conversations.",
+        "NOTE": "When enabled, agents will only see conversations assigned to teams they belong to. Administrators can still see all conversations.",
         "API": {
           "SUCCESS": "Conversation visibility setting updated successfully",
           "ERROR": "Failed to update conversation visibility setting"

@@ -6,6 +6,7 @@ import {
   ROLES,
   CONVERSATION_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
+import { redirectRestrictedConversationRoute } from 'dashboard/helper/teamConversationRestriction';
 
 export const routes = [
   {
@@ -19,6 +20,7 @@ export const routes = [
         meta: {
           permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
         },
+        beforeEnter: redirectRestrictedConversationRoute,
       },
       {
         path: ':type/:id',
@@ -27,6 +29,7 @@ export const routes = [
         meta: {
           permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
         },
+        beforeEnter: redirectRestrictedConversationRoute,
       },
     ],
   },
