@@ -12,7 +12,7 @@ module AccountSettingsSchema
         'auto_resolve_message': { 'type': %w[string null] },
         'auto_resolve_ignore_waiting': { 'type': %w[boolean null] },
         'audio_transcriptions': { 'type': %w[boolean null] },
-        'restrict_conversations_by_team': { 'type': %w[boolean null] },
+        'conversation_visibility_mode': { 'type': %w[integer null], 'enum': [0, 1, 2, nil] },
         'clear_labels_on_resolved': { 'type': %w[boolean null] },
         'auto_resolve_label': { 'type': %w[string null] },
         'keep_pending_on_bot_failure': { 'type': %w[boolean null] },

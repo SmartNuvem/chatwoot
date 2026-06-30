@@ -70,12 +70,12 @@ RSpec.describe ConversationPolicy, type: :policy do
       end
     end
 
-    context 'when team restriction is enabled' do
+    context 'when team visibility mode is enabled' do
       let(:inbox) { create(:inbox, account: account) }
       let(:team) { create(:team, account: account) }
 
       before do
-        account.update!(settings: { restrict_conversations_by_team: true })
+        account.update!(settings: { conversation_visibility_mode: Account::CONVERSATION_VISIBILITY_MODES[:team] })
         create(:inbox_member, user: agent, inbox: inbox)
       end
 
@@ -96,6 +96,36 @@ RSpec.describe ConversationPolicy, type: :policy do
         team_conversation = create(:conversation, account: account, inbox: inbox, team: team)
 
         expect(subject).to permit(agent_context, team_conversation)
+      end
+    end
+
+    context 'when assignee visibility mode is enabled' do
+      let(:inbox) { create(:inbox, account: account) }
+      let(:team) { create(:team, account: account) }
+      let(:other_agent) { create(:user, account: account, role: :agent) }
+
+      before do
+        account.update!(settings: { conversation_visibility_mode: Account::CONVERSATION_VISIBILITY_MODES[:assignee] })
+        create(:inbox_member, user: agent, inbox: inbox)
+        create(:team_member, user: agent, team: team)
+      end
+
+      it 'allows access to conversations assigned directly to the agent' do
+        assigned_conversation = create(:conversation, account: account, inbox: inbox, team: team, assignee: agent)
+
+        expect(subject).to permit(agent_context, assigned_conversation)
+      end
+
+      it 'denies access to team conversations assigned to another agent' do
+        assigned_to_other = create(:conversation, account: account, inbox: inbox, team: team, assignee: other_agent)
+
+        expect(subject).not_to permit(agent_context, assigned_to_other)
+      end
+
+      it 'denies access to team conversations without an assignee' do
+        team_conversation = create(:conversation, account: account, inbox: inbox, team: team, assignee: nil)
+
+        expect(subject).not_to permit(agent_context, team_conversation)
       end
     end
   end

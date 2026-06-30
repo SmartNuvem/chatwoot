@@ -18,7 +18,15 @@ module Enterprise::SearchService
   def build_where_conditions
     conditions = { account_id: current_account.id }
     conditions[:inbox_id] = accessable_inbox_ids unless should_skip_inbox_filtering?
+    conditions[:conversation_id] = accessible_conversations.select(:id).pluck(:id) if should_apply_conversation_visibility_filter?
     conditions
+  end
+
+  def should_apply_conversation_visibility_filter?
+    return false if account_user.administrator?
+
+    current_account.conversation_visibility_mode != Account::CONVERSATION_VISIBILITY_MODES[:default] ||
+      account_user.custom_role_id.present?
   end
 
   def apply_filters(where_conditions)

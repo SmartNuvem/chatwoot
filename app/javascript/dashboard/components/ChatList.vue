@@ -30,6 +30,10 @@ import {
 } from 'dashboard/composables/useTransformKeys';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { useConversationRequiredAttributes } from 'dashboard/composables/useConversationRequiredAttributes';
+import {
+  resolveConversationVisibilityMode,
+  CONVERSATION_VISIBILITY_MODES,
+} from 'dashboard/helper/teamConversationRestriction';
 
 import { emitter } from 'shared/helpers/mitt';
 
@@ -272,9 +276,13 @@ const currentAccount = computed(
   () => store.getters['accounts/getAccount'](currentAccountId.value) || {}
 );
 
+const conversationVisibilityMode = computed(() =>
+  resolveConversationVisibilityMode(currentAccount.value.settings || {})
+);
+
 const isTeamConversationRestrictionActive = computed(() => {
   return (
-    !!currentAccount.value.settings?.restrict_conversations_by_team &&
+    conversationVisibilityMode.value === CONVERSATION_VISIBILITY_MODES.TEAM &&
     currentRole.value !== 'administrator'
   );
 });

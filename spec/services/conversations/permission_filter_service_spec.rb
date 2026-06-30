@@ -44,7 +44,7 @@ RSpec.describe Conversations::PermissionFilterService do
       end
     end
 
-    context 'when restrict_conversations_by_team is enabled' do
+    context 'when team visibility mode is enabled' do
       let(:commercial_agent) { create(:user, account: account, role: :agent) }
       let(:finance_agent) { create(:user, account: account, role: :agent) }
       let(:multi_team_agent) { create(:user, account: account, role: :agent) }
@@ -56,7 +56,7 @@ RSpec.describe Conversations::PermissionFilterService do
       let!(:directly_assigned_conversation) { create(:conversation, account: account, inbox: inbox, team: nil, assignee: commercial_agent) }
 
       before do
-        account.update!(settings: { restrict_conversations_by_team: true })
+        account.update!(settings: { conversation_visibility_mode: Account::CONVERSATION_VISIBILITY_MODES[:team] })
 
         [commercial_agent, finance_agent, multi_team_agent].each do |user|
           create(:inbox_member, user: user, inbox: inbox)
@@ -103,7 +103,7 @@ RSpec.describe Conversations::PermissionFilterService do
       end
 
       it 'keeps the original behavior when the setting is disabled' do
-        account.update!(settings: { restrict_conversations_by_team: false })
+        account.update!(settings: { conversation_visibility_mode: Account::CONVERSATION_VISIBILITY_MODES[:default] })
 
         result = described_class.new(account.conversations, commercial_agent, account).perform
 
@@ -111,6 +111,102 @@ RSpec.describe Conversations::PermissionFilterService do
         expect(result).to include(finance_conversation)
         expect(result).to include(unassigned_to_team_conversation)
         expect(result).to include(directly_assigned_conversation)
+      end
+    end
+
+    context 'when assignee visibility mode is enabled' do
+      let(:commercial_agent) { create(:user, account: account, role: :agent) }
+      let(:other_agent) { create(:user, account: account, role: :agent) }
+      let(:commercial_team) { create(:team, account: account, name: 'Commercial') }
+      let(:finance_team) { create(:team, account: account, name: 'Finance') }
+      let!(:assigned_to_agent) { create(:conversation, account: account, inbox: inbox, team: commercial_team, assignee: commercial_agent) }
+      let!(:assigned_to_other_agent) { create(:conversation, account: account, inbox: inbox, team: commercial_team, assignee: other_agent) }
+      let!(:team_unassigned) { create(:conversation, account: account, inbox: inbox, team: commercial_team, assignee: nil) }
+      let!(:other_team_conversation) { create(:conversation, account: account, inbox: inbox, team: finance_team, assignee: other_agent) }
+
+      before do
+        account.update!(settings: { conversation_visibility_mode: Account::CONVERSATION_VISIBILITY_MODES[:assignee] })
+
+        [commercial_agent, other_agent].each do |user|
+          create(:inbox_member, user: user, inbox: inbox)
+        end
+
+        create(:team_member, user: commercial_agent, team: commercial_team)
+        create(:team_member, user: other_agent, team: commercial_team)
+      end
+
+      it 'returns all conversations for administrators' do
+        result = described_class.new(account.conversations, admin, account).perform
+
+        expect(result).to include(assigned_to_agent)
+        expect(result).to include(assigned_to_other_agent)
+        expect(result).to include(team_unassigned)
+        expect(result).to include(other_team_conversation)
+      end
+
+      it 'returns only conversations assigned directly to the agent' do
+        result = described_class.new(account.conversations, commercial_agent, account).perform
+
+        expect(result).to include(assigned_to_agent)
+        expect(result).not_to include(assigned_to_other_agent)
+        expect(result).not_to include(team_unassigned)
+        expect(result).not_to include(other_team_conversation)
+      end
+
+      it 'takes priority over legacy team restriction' do
+        account.update!(
+          settings: {
+            restrict_conversations_by_team: true,
+            conversation_visibility_mode: Account::CONVERSATION_VISIBILITY_MODES[:assignee]
+          }
+        )
+
+        result = described_class.new(account.conversations, commercial_agent, account).perform
+
+        expect(result).to contain_exactly(assigned_to_agent)
+      end
+
+      it 'keeps the original behavior when the setting is disabled' do
+        account.update!(settings: { conversation_visibility_mode: Account::CONVERSATION_VISIBILITY_MODES[:default] })
+
+        result = described_class.new(account.conversations, commercial_agent, account).perform
+
+        expect(result).to include(assigned_to_agent)
+        expect(result).to include(assigned_to_other_agent)
+        expect(result).to include(team_unassigned)
+        expect(result).to include(other_team_conversation)
+      end
+    end
+
+    context 'when legacy conversation restriction settings exist' do
+      let(:commercial_agent) { create(:user, account: account, role: :agent) }
+      let(:commercial_team) { create(:team, account: account, name: 'Commercial') }
+      let(:finance_team) { create(:team, account: account, name: 'Finance') }
+      let!(:commercial_conversation) { create(:conversation, account: account, inbox: inbox, team: commercial_team) }
+      let!(:finance_conversation) { create(:conversation, account: account, inbox: inbox, team: finance_team) }
+      let!(:assigned_conversation) { create(:conversation, account: account, inbox: inbox, team: finance_team, assignee: commercial_agent) }
+
+      before do
+        create(:inbox_member, user: commercial_agent, inbox: inbox)
+        create(:team_member, user: commercial_agent, team: commercial_team)
+      end
+
+      it 'uses legacy team restriction as team visibility mode' do
+        account.update!(settings: { restrict_conversations_by_team: true })
+
+        result = described_class.new(account.conversations, commercial_agent, account).perform
+
+        expect(result).to include(commercial_conversation)
+        expect(result).to include(assigned_conversation)
+        expect(result).not_to include(finance_conversation)
+      end
+
+      it 'uses legacy assignee restriction as assignee visibility mode' do
+        account.update!(settings: { restrict_conversations_by_team: true, restrict_conversations_to_assignee: true })
+
+        result = described_class.new(account.conversations, commercial_agent, account).perform
+
+        expect(result).to contain_exactly(assigned_conversation)
       end
     end
   end

@@ -3,9 +3,35 @@
 require 'rails_helper'
 
 RSpec.describe Account do
-  describe '#restrict_conversations_by_team?' do
-    it 'defaults to false' do
-      expect(described_class.new.restrict_conversations_by_team?).to be false
+  describe '#conversation_visibility_mode' do
+    it 'defaults to default mode' do
+      expect(described_class.new.conversation_visibility_mode).to eq(described_class::CONVERSATION_VISIBILITY_MODES[:default])
+    end
+
+    it 'uses the configured visibility mode' do
+      account = described_class.new(settings: { conversation_visibility_mode: described_class::CONVERSATION_VISIBILITY_MODES[:assignee] })
+
+      expect(account.conversation_visibility_mode).to eq(described_class::CONVERSATION_VISIBILITY_MODES[:assignee])
+    end
+
+    it 'migrates legacy assignee restriction with priority' do
+      account = described_class.new(settings: { restrict_conversations_by_team: true, restrict_conversations_to_assignee: true })
+
+      expect(account.conversation_visibility_mode).to eq(described_class::CONVERSATION_VISIBILITY_MODES[:assignee])
+    end
+
+    it 'migrates legacy team restriction' do
+      account = described_class.new(settings: { restrict_conversations_by_team: true })
+
+      expect(account.conversation_visibility_mode).to eq(described_class::CONVERSATION_VISIBILITY_MODES[:team])
+    end
+
+    it 'normalizes legacy settings on validation' do
+      account = described_class.new(settings: { restrict_conversations_by_team: true })
+
+      account.valid?
+
+      expect(account.settings['conversation_visibility_mode']).to eq(described_class::CONVERSATION_VISIBILITY_MODES[:team])
     end
   end
 

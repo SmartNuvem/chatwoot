@@ -27,6 +27,10 @@ import {
   resolveSidebarSort,
   sortSidebarItems,
 } from 'dashboard/helper/sidebarSort';
+import {
+  resolveConversationVisibilityMode,
+  CONVERSATION_VISIBILITY_MODES,
+} from 'dashboard/helper/teamConversationRestriction';
 
 const props = defineProps({
   isMobileSidebarOpen: {
@@ -213,9 +217,21 @@ const currentAccount = computed(
   () => store.getters['accounts/getAccount'](accountId.value) || {}
 );
 
+const conversationVisibilityMode = computed(() =>
+  resolveConversationVisibilityMode(currentAccount.value.settings || {})
+);
+
 const isTeamConversationRestrictionActive = computed(() => {
   return (
-    !!currentAccount.value.settings?.restrict_conversations_by_team &&
+    conversationVisibilityMode.value === CONVERSATION_VISIBILITY_MODES.TEAM &&
+    currentRole.value !== 'administrator'
+  );
+});
+
+const isAssigneeConversationRestrictionActive = computed(() => {
+  return (
+    conversationVisibilityMode.value ===
+      CONVERSATION_VISIBILITY_MODES.ASSIGNEE &&
     currentRole.value !== 'administrator'
   );
 });
@@ -364,6 +380,16 @@ const restrictedConversationChildren = computed(() => [
   },
 ]);
 
+const assigneeRestrictedConversationChildren = computed(() => [
+  {
+    name: 'Mine',
+    label: t('CHAT_LIST.ASSIGNEE_TYPE_TABS.me'),
+    icon: 'i-lucide-user-round-check',
+    activeOn: ['inbox_conversation'],
+    to: accountScopedRoute('home'),
+  },
+]);
+
 const fullConversationChildren = computed(() => [
   {
     name: 'All',
@@ -470,12 +496,19 @@ const fullConversationChildren = computed(() => [
 ]);
 
 const menuItems = computed(() => {
-  const conversationChildren = isTeamConversationRestrictionActive.value
-    ? restrictedConversationChildren.value
-    : fullConversationChildren.value;
+  const conversationChildren = (() => {
+    if (isAssigneeConversationRestrictionActive.value) {
+      return assigneeRestrictedConversationChildren.value;
+    }
+    if (isTeamConversationRestrictionActive.value) {
+      return restrictedConversationChildren.value;
+    }
+    return fullConversationChildren.value;
+  })();
 
   return [
-    ...(!isTeamConversationRestrictionActive.value
+    ...(!isTeamConversationRestrictionActive.value &&
+    !isAssigneeConversationRestrictionActive.value
       ? [
           {
             name: 'Inbox',

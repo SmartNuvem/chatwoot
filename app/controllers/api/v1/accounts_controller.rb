@@ -119,7 +119,7 @@ class Api::V1::AccountsController < Api::BaseController
 
   def permitted_settings_attributes
     [:auto_resolve_after, :auto_resolve_message, :auto_resolve_ignore_waiting, :audio_transcriptions, :auto_resolve_label,
-     :restrict_conversations_by_team, :clear_labels_on_resolved]
+     :conversation_visibility_mode, :clear_labels_on_resolved]
   end
 
   def check_signup_enabled

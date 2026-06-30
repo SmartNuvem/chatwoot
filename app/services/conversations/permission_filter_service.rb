@@ -17,9 +17,15 @@ class Conversations::PermissionFilterService
 
   def accessible_conversations
     accessible_by_inbox = conversations.where(inbox: user.inboxes.where(account_id: account.id))
-    return accessible_by_inbox unless account.restrict_conversations_by_team?
 
-    accessible_by_team_or_assignment(accessible_by_inbox)
+    case account.conversation_visibility_mode
+    when Account::CONVERSATION_VISIBILITY_MODES[:assignee]
+      accessible_by_inbox.assigned_to(user)
+    when Account::CONVERSATION_VISIBILITY_MODES[:team]
+      accessible_by_team_or_assignment(accessible_by_inbox)
+    else
+      accessible_by_inbox
+    end
   end
 
   def accessible_by_team_or_assignment(conversation_scope)

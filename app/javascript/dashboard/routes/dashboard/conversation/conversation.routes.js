@@ -2,7 +2,11 @@
 import { frontendURL } from '../../../helper/URLHelper';
 import store from '../../../store';
 import ConversationView from './ConversationView.vue';
-import { redirectRestrictedConversationRoute } from 'dashboard/helper/teamConversationRestriction';
+import {
+  redirectRestrictedConversationRoute,
+  redirectAssigneeRestrictedConversationRoute,
+  restrictedConversationRouteRedirect,
+} from 'dashboard/helper/teamConversationRestriction';
 
 const CONVERSATION_PERMISSIONS = [
   'administrator',
@@ -22,6 +26,12 @@ const isFolderAvailable = async folderId => {
 };
 
 const redirectFolderListIfUnavailable = async (to, _from, next) => {
+  const restrictedRedirect = await restrictedConversationRouteRedirect(to);
+  if (restrictedRedirect) {
+    next(restrictedRedirect);
+    return;
+  }
+
   if (await isFolderAvailable(to.params.id)) {
     next();
     return;
@@ -30,6 +40,12 @@ const redirectFolderListIfUnavailable = async (to, _from, next) => {
 };
 
 const redirectFolderConversationIfUnavailable = async (to, _from, next) => {
+  const restrictedRedirect = await restrictedConversationRouteRedirect(to);
+  if (restrictedRedirect) {
+    next(restrictedRedirect);
+    return;
+  }
+
   if (await isFolderAvailable(to.params.id)) {
     next();
     return;
@@ -102,6 +118,7 @@ export default {
       meta: {
         permissions: CONVERSATION_PERMISSIONS,
       },
+      beforeEnter: redirectRestrictedConversationRoute,
       component: ConversationView,
       props: route => ({ label: route.params.label }),
     },
@@ -113,6 +130,7 @@ export default {
       meta: {
         permissions: CONVERSATION_PERMISSIONS,
       },
+      beforeEnter: redirectRestrictedConversationRoute,
       component: ConversationView,
       props: route => ({
         conversationId: route.params.conversation_id,
@@ -125,6 +143,7 @@ export default {
       meta: {
         permissions: CONVERSATION_PERMISSIONS,
       },
+      beforeEnter: redirectRestrictedConversationRoute,
       component: ConversationView,
       props: route => ({ teamId: route.params.teamId }),
     },
@@ -136,6 +155,7 @@ export default {
       meta: {
         permissions: CONVERSATION_PERMISSIONS,
       },
+      beforeEnter: redirectRestrictedConversationRoute,
       component: ConversationView,
       props: route => ({
         conversationId: route.params.conversationId,
@@ -173,6 +193,7 @@ export default {
       meta: {
         permissions: CONVERSATION_PERMISSIONS,
       },
+      beforeEnter: redirectAssigneeRestrictedConversationRoute,
       component: ConversationView,
       props: () => ({ conversationType: 'mention' }),
     },
@@ -184,6 +205,7 @@ export default {
       meta: {
         permissions: CONVERSATION_PERMISSIONS,
       },
+      beforeEnter: redirectAssigneeRestrictedConversationRoute,
       component: ConversationView,
       props: route => ({
         conversationId: route.params.conversationId,
@@ -196,6 +218,7 @@ export default {
       meta: {
         permissions: CONVERSATION_PERMISSIONS,
       },
+      beforeEnter: redirectRestrictedConversationRoute,
       component: ConversationView,
       props: () => ({ conversationType: 'unattended' }),
     },
@@ -207,6 +230,7 @@ export default {
       meta: {
         permissions: CONVERSATION_PERMISSIONS,
       },
+      beforeEnter: redirectRestrictedConversationRoute,
       component: ConversationView,
       props: route => ({
         conversationId: route.params.conversationId,
@@ -219,6 +243,7 @@ export default {
       meta: {
         permissions: CONVERSATION_PERMISSIONS,
       },
+      beforeEnter: redirectAssigneeRestrictedConversationRoute,
       component: ConversationView,
       props: () => ({ conversationType: 'participating' }),
     },
@@ -230,6 +255,7 @@ export default {
       meta: {
         permissions: CONVERSATION_PERMISSIONS,
       },
+      beforeEnter: redirectAssigneeRestrictedConversationRoute,
       component: ConversationView,
       props: route => ({
         conversationId: route.params.conversationId,

@@ -14,9 +14,14 @@ class ConversationPolicy < ApplicationPolicy
   private
 
   def agent_can_view_conversation?
-    return restricted_team_access? if account&.restrict_conversations_by_team?
-
-    inbox_access? || team_access?
+    case account&.conversation_visibility_mode
+    when Account::CONVERSATION_VISIBILITY_MODES[:assignee]
+      assigned_to_user?
+    when Account::CONVERSATION_VISIBILITY_MODES[:team]
+      restricted_team_access?
+    else
+      inbox_access? || team_access?
+    end
   end
 
   def administrator?

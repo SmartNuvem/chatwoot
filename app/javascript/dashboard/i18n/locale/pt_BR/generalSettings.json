@@ -104,12 +104,26 @@
           "ERROR": "Falha ao atualizar configuração de transcrição de áudio"
         }
       },
-      "RESTRICT_CONVERSATIONS_BY_TEAM": {
-        "TITLE": "Restringir visualização de conversas por time",
-        "NOTE": "Quando ativado, agentes comuns verão apenas conversas atribuídas aos times dos quais fazem parte. Administradores continuam vendo todas as conversas.",
+      "CONVERSATION_VISIBILITY_MODE": {
+        "TITLE": "Visibilidade das conversas",
+        "NOTE": "Defina quais conversas os agentes comuns poderão visualizar. Administradores sempre terão acesso a todas as conversas.",
+        "OPTIONS": {
+          "DEFAULT": {
+            "LABEL": "Padrão",
+            "DESCRIPTION": "Todos os agentes da Caixa de Entrada podem visualizar as conversas conforme o comportamento original do Chatwoot."
+          },
+          "TEAM": {
+            "LABEL": "Por Time",
+            "DESCRIPTION": "Os agentes visualizarão apenas conversas atribuídas aos times dos quais fazem parte."
+          },
+          "ASSIGNEE": {
+            "LABEL": "Apenas Responsável",
+            "DESCRIPTION": "Cada agente visualizará apenas conversas atribuídas diretamente a ele. Conversas sem responsável ou atribuídas a outros agentes ficarão ocultas."
+          }
+        },
         "API": {
-          "SUCCESS": "Configuração de visualização de conversas atualizada com sucesso",
-          "ERROR": "Falha ao atualizar configuração de visualização de conversas"
+          "SUCCESS": "Configuração de visibilidade de conversas atualizada com sucesso",
+          "ERROR": "Falha ao atualizar configuração de visibilidade de conversas"
         }
       },
       "CLEAR_LABELS_ON_RESOLVED": {

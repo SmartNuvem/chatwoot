@@ -36,6 +36,11 @@ class Account < ApplicationRecord
     flag_query_mode: :bit_operator,
     check_for_column: false
   }.freeze
+  CONVERSATION_VISIBILITY_MODES = {
+    default: 0,
+    team: 1,
+    assignee: 2
+  }.freeze
 
   validates :name, presence: true
   # `domain` is the inbound email domain used to construct reply addresses
@@ -51,7 +56,7 @@ class Account < ApplicationRecord
   store_accessor :settings, :auto_resolve_after, :auto_resolve_message, :auto_resolve_ignore_waiting
 
   store_accessor :settings, :audio_transcriptions, :auto_resolve_label
-  store_accessor :settings, :restrict_conversations_by_team
+  store_accessor :settings, :conversation_visibility_mode
   store_accessor :settings, :clear_labels_on_resolved
   store_accessor :settings, :captain_models, :captain_features
   store_accessor :settings, :reporting_timezone
@@ -110,6 +115,7 @@ class Account < ApplicationRecord
   scope :with_auto_resolve, -> { where("(settings ->> 'auto_resolve_after')::int IS NOT NULL") }
 
   before_validation :validate_limit_keys
+  before_validation :normalize_conversation_visibility_mode
   after_create_commit :notify_creation
   after_update_commit :clear_unread_conversation_counts_cache, if: :saved_change_to_feature_conversation_unread_counts?
   after_destroy :remove_account_sequences
@@ -155,8 +161,19 @@ class Account < ApplicationRecord
     }
   end
 
-  def restrict_conversations_by_team?
-    ActiveModel::Type::Boolean.new.cast(restrict_conversations_by_team)
+  def conversation_visibility_mode
+    raw_mode = settings&.fetch('conversation_visibility_mode', nil)
+    return raw_mode.to_i if raw_mode.present? || raw_mode == 0
+
+    return CONVERSATION_VISIBILITY_MODES[:assignee] if settings_boolean('restrict_conversations_to_assignee')
+    return CONVERSATION_VISIBILITY_MODES[:team] if settings_boolean('restrict_conversations_by_team')
+
+    CONVERSATION_VISIBILITY_MODES[:default]
+  end
+
+  def conversation_visibility_mode=(value)
+    self.settings ||= {}
+    settings['conversation_visibility_mode'] = value.present? ? value.to_i : nil
   end
 
   def clear_labels_on_resolved?
@@ -192,6 +209,16 @@ class Account < ApplicationRecord
 
   def clear_unread_conversation_counts_cache
     ::Conversations::UnreadCounts::Store.clear_account!(id)
+  end
+
+  def settings_boolean(key)
+    ActiveModel::Type::Boolean.new.cast(settings&.fetch(key, nil))
+  end
+
+  def normalize_conversation_visibility_mode
+    return unless settings.is_a?(Hash)
+
+    settings['conversation_visibility_mode'] = conversation_visibility_mode
   end
 
   trigger.after(:insert).for_each(:row) do

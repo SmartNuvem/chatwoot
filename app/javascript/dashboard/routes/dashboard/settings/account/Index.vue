@@ -17,6 +17,10 @@ import BuildInfo from './components/BuildInfo.vue';
 import AccountDelete from './components/AccountDelete.vue';
 import AudioTranscription from './components/AudioTranscription.vue';
 import SectionLayout from './components/SectionLayout.vue';
+import {
+  resolveConversationVisibilityMode,
+  CONVERSATION_VISIBILITY_MODES,
+} from 'dashboard/helper/teamConversationRestriction';
 
 export default {
   components: {
@@ -46,7 +50,7 @@ export default {
       locale: 'en',
       domain: '',
       supportEmail: '',
-      restrictConversationsByTeam: false,
+      conversationVisibilityMode: CONVERSATION_VISIBILITY_MODES.DEFAULT,
       clearLabelsOnResolved: false,
       features: {},
     };
@@ -97,6 +101,37 @@ export default {
     currentAccount() {
       return this.getAccount(this.accountId) || {};
     },
+    conversationVisibilityOptions() {
+      return [
+        {
+          value: CONVERSATION_VISIBILITY_MODES.DEFAULT,
+          label: this.$t(
+            'GENERAL_SETTINGS.FORM.CONVERSATION_VISIBILITY_MODE.OPTIONS.DEFAULT.LABEL'
+          ),
+          description: this.$t(
+            'GENERAL_SETTINGS.FORM.CONVERSATION_VISIBILITY_MODE.OPTIONS.DEFAULT.DESCRIPTION'
+          ),
+        },
+        {
+          value: CONVERSATION_VISIBILITY_MODES.TEAM,
+          label: this.$t(
+            'GENERAL_SETTINGS.FORM.CONVERSATION_VISIBILITY_MODE.OPTIONS.TEAM.LABEL'
+          ),
+          description: this.$t(
+            'GENERAL_SETTINGS.FORM.CONVERSATION_VISIBILITY_MODE.OPTIONS.TEAM.DESCRIPTION'
+          ),
+        },
+        {
+          value: CONVERSATION_VISIBILITY_MODES.ASSIGNEE,
+          label: this.$t(
+            'GENERAL_SETTINGS.FORM.CONVERSATION_VISIBILITY_MODE.OPTIONS.ASSIGNEE.LABEL'
+          ),
+          description: this.$t(
+            'GENERAL_SETTINGS.FORM.CONVERSATION_VISIBILITY_MODE.OPTIONS.ASSIGNEE.DESCRIPTION'
+          ),
+        },
+      ];
+    },
   },
   watch: {
     'currentAccount.id'(id) {
@@ -126,8 +161,8 @@ export default {
         this.id = id;
         this.domain = domain;
         this.supportEmail = support_email;
-        this.restrictConversationsByTeam =
-          !!settings?.restrict_conversations_by_team;
+        this.conversationVisibilityMode =
+          resolveConversationVisibilityMode(settings);
         this.clearLabelsOnResolved = !!settings?.clear_labels_on_resolved;
         this.features = features;
       } catch (error) {
@@ -147,7 +182,7 @@ export default {
           name: this.name,
           domain: this.domain,
           support_email: this.supportEmail,
-          restrict_conversations_by_team: this.restrictConversationsByTeam,
+          conversation_visibility_mode: this.conversationVisibilityMode,
           clear_labels_on_resolved: this.clearLabelsOnResolved,
         });
         // If user locale is set, update the locale with user locale
@@ -162,21 +197,21 @@ export default {
       }
     },
 
-    async updateConversationVisibilityRestriction() {
+    async updateConversationVisibilityMode() {
       try {
         await this.$store.dispatch('accounts/update', {
-          restrict_conversations_by_team: this.restrictConversationsByTeam,
+          conversation_visibility_mode: this.conversationVisibilityMode,
           options: { silent: true },
         });
         useAlert(
           this.$t(
-            'GENERAL_SETTINGS.FORM.RESTRICT_CONVERSATIONS_BY_TEAM.API.SUCCESS'
+            'GENERAL_SETTINGS.FORM.CONVERSATION_VISIBILITY_MODE.API.SUCCESS'
           )
         );
       } catch (error) {
         useAlert(
           this.$t(
-            'GENERAL_SETTINGS.FORM.RESTRICT_CONVERSATIONS_BY_TEAM.API.ERROR'
+            'GENERAL_SETTINGS.FORM.CONVERSATION_VISIBILITY_MODE.API.ERROR'
           )
         );
       }
@@ -294,20 +329,36 @@ export default {
     </div>
     <SectionLayout
       v-if="!uiFlags.isFetchingItem"
-      :title="$t('GENERAL_SETTINGS.FORM.RESTRICT_CONVERSATIONS_BY_TEAM.TITLE')"
+      :title="$t('GENERAL_SETTINGS.FORM.CONVERSATION_VISIBILITY_MODE.TITLE')"
       :description="
-        $t('GENERAL_SETTINGS.FORM.RESTRICT_CONVERSATIONS_BY_TEAM.NOTE')
+        $t('GENERAL_SETTINGS.FORM.CONVERSATION_VISIBILITY_MODE.NOTE')
       "
       with-border
     >
-      <template #headerActions>
-        <div class="flex justify-end">
-          <Switch
-            v-model="restrictConversationsByTeam"
-            @change="updateConversationVisibilityRestriction"
+      <fieldset class="grid gap-3">
+        <label
+          v-for="option in conversationVisibilityOptions"
+          :key="option.value"
+          class="flex gap-3 p-3 border rounded-lg cursor-pointer border-n-weak hover:border-n-slate-6"
+        >
+          <input
+            v-model="conversationVisibilityMode"
+            type="radio"
+            name="conversation_visibility_mode"
+            class="mt-1"
+            :value="option.value"
+            @change="updateConversationVisibilityMode"
           />
-        </div>
-      </template>
+          <span class="grid gap-1">
+            <span class="text-sm font-medium text-n-slate-12">
+              {{ option.label }}
+            </span>
+            <span class="text-sm text-n-slate-11">
+              {{ option.description }}
+            </span>
+          </span>
+        </label>
+      </fieldset>
     </SectionLayout>
     <SectionLayout
       v-if="!uiFlags.isFetchingItem"
