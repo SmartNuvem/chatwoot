@@ -41,6 +41,14 @@ class Account < ApplicationRecord
     team: 1,
     assignee: 2
   }.freeze
+  DEFAULT_RESOLVED_MESSAGE_TEXT = "Agradecemos por entrar em contato conosco 😊\n\n" \
+                                  "Permanecemos à disposição para qualquer necessidade futura.\n\n" \
+                                  "Desejamos um excelente dia!\n\n" \
+                                  "Atenciosamente,\nEquipe {{account.name}}".freeze
+  DEFAULT_AUTO_RESOLVE_INACTIVE_CONVERSATIONS_MINUTES = 60
+  DEFAULT_AUTO_RESOLVE_INACTIVE_CONVERSATIONS_MESSAGE = "Como não tivemos novas interações, estamos finalizando este atendimento automaticamente. 😊\n\n" \
+                                                       "Caso precise de algo, basta enviar uma nova mensagem.\n\n" \
+                                                       "Atenciosamente,\nEquipe {{account.name}}".freeze
 
   validates :name, presence: true
   # `domain` is the inbound email domain used to construct reply addresses
@@ -58,6 +66,9 @@ class Account < ApplicationRecord
   store_accessor :settings, :audio_transcriptions, :auto_resolve_label
   store_accessor :settings, :conversation_visibility_mode
   store_accessor :settings, :clear_labels_on_resolved
+  store_accessor :settings, :resolved_message_enabled, :resolved_message_text
+  store_accessor :settings, :auto_resolve_inactive_conversations_enabled, :auto_resolve_inactive_conversations_minutes
+  store_accessor :settings, :auto_resolve_inactive_conversations_message
   store_accessor :settings, :captain_models, :captain_features
   store_accessor :settings, :reporting_timezone
   store_accessor :settings, :keep_pending_on_bot_failure
@@ -113,6 +124,7 @@ class Account < ApplicationRecord
   enum :status, { active: 0, suspended: 1 }
 
   scope :with_auto_resolve, -> { where("(settings ->> 'auto_resolve_after')::int IS NOT NULL") }
+  scope :with_inactive_conversation_auto_resolve, -> { where("(settings ->> 'auto_resolve_inactive_conversations_enabled') = 'true'") }
 
   before_validation :validate_limit_keys
   before_validation :normalize_conversation_visibility_mode
@@ -180,6 +192,32 @@ class Account < ApplicationRecord
     ActiveModel::Type::Boolean.new.cast(clear_labels_on_resolved)
   end
 
+  def resolved_message_enabled?
+    ActiveModel::Type::Boolean.new.cast(resolved_message_enabled)
+  end
+
+  def resolved_message_text
+    settings_value_or_default('resolved_message_text', DEFAULT_RESOLVED_MESSAGE_TEXT)
+  end
+
+  def auto_resolve_inactive_conversations_enabled?
+    ActiveModel::Type::Boolean.new.cast(auto_resolve_inactive_conversations_enabled)
+  end
+
+  def auto_resolve_inactive_conversations_minutes
+    settings_value_or_default(
+      'auto_resolve_inactive_conversations_minutes',
+      DEFAULT_AUTO_RESOLVE_INACTIVE_CONVERSATIONS_MINUTES
+    ).to_i
+  end
+
+  def auto_resolve_inactive_conversations_message
+    settings_value_or_default(
+      'auto_resolve_inactive_conversations_message',
+      DEFAULT_AUTO_RESOLVE_INACTIVE_CONVERSATIONS_MESSAGE
+    )
+  end
+
   def locale_english_name
     # the locale can also be something like pt_BR, en_US, fr_FR, etc.
     # the format is `<locale_code>_<country_code>`
@@ -213,6 +251,12 @@ class Account < ApplicationRecord
 
   def settings_boolean(key)
     ActiveModel::Type::Boolean.new.cast(settings&.fetch(key, nil))
+  end
+
+  def settings_value_or_default(key, default_value)
+    return default_value unless settings&.key?(key)
+
+    settings[key]
   end
 
   def normalize_conversation_visibility_mode

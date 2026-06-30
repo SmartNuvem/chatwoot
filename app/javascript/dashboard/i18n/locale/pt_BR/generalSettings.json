@@ -134,6 +134,25 @@
           "ERROR": "Falha ao atualizar configuração de limpeza de etiquetas"
         }
       },
+      "RESOLVED_MESSAGE": {
+        "TITLE": "Enviar mensagem ao resolver",
+        "NOTE": "Quando ativado, uma mensagem será enviada automaticamente ao cliente ao marcar a conversa como resolvida.",
+        "MESSAGE_LABEL": "Mensagem ao resolver",
+        "API": {
+          "SUCCESS": "Configuração de mensagem ao resolver atualizada com sucesso",
+          "ERROR": "Falha ao atualizar configuração de mensagem ao resolver"
+        }
+      },
+      "AUTO_RESOLVE_INACTIVE_CONVERSATIONS": {
+        "TITLE": "Resolver automaticamente conversas sem interação",
+        "NOTE": "Quando ativado, conversas abertas sem novas interações pelo tempo configurado serão finalizadas automaticamente.",
+        "MINUTES_LABEL": "Tempo sem interação em minutos",
+        "MESSAGE_LABEL": "Mensagem antes da finalização automática",
+        "API": {
+          "SUCCESS": "Configuração de resolução automática por inatividade atualizada com sucesso",
+          "ERROR": "Falha ao atualizar configuração de resolução automática por inatividade"
+        }
+      },
       "AUTO_RESOLVE_DURATION": {
         "LABEL": "Tempo de inatividade para resolução",
         "HELP": "Tempo de inatividade após o qual a conversa deve ser encerrada automaticamente",

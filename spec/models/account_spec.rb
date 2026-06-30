@@ -41,6 +41,24 @@ RSpec.describe Account do
     end
   end
 
+  describe '#resolved_message_enabled?' do
+    it 'defaults to false' do
+      expect(described_class.new.resolved_message_enabled?).to be false
+    end
+  end
+
+  describe '#auto_resolve_inactive_conversations_enabled?' do
+    it 'defaults to false' do
+      expect(described_class.new.auto_resolve_inactive_conversations_enabled?).to be false
+    end
+  end
+
+  describe '#auto_resolve_inactive_conversations_minutes' do
+    it 'defaults to 60' do
+      expect(described_class.new.auto_resolve_inactive_conversations_minutes).to eq(60)
+    end
+  end
+
   it { is_expected.to have_many(:users).through(:account_users) }
   it { is_expected.to have_many(:account_users) }
   it { is_expected.to have_many(:inboxes).dependent(:destroy_async) }

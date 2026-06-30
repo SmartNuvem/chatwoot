@@ -74,6 +74,7 @@ class Conversation < ApplicationRecord
 
   enum status: { open: 0, resolved: 1, pending: 2, snoozed: 3 }
   enum priority: { low: 0, medium: 1, high: 2, urgent: 3 }
+  attr_accessor :skip_resolved_message
 
   scope :unassigned, -> { where(assignee_id: nil) }
   scope :assigned, -> { where.not(assignee_id: nil) }
@@ -248,6 +249,7 @@ class Conversation < ApplicationRecord
     notify_status_change
     create_activity
     notify_conversation_updation
+    send_resolved_message
     clear_labels_on_resolved
   end
 
@@ -264,6 +266,12 @@ class Conversation < ApplicationRecord
     return unless saved_change_to_status? && resolved?
 
     Conversations::ClearLabelsOnResolvedService.new(conversation: self).perform
+  end
+
+  def send_resolved_message
+    return unless saved_change_to_status? && resolved?
+
+    Conversations::SendResolvedMessageService.new(conversation: self).perform
   end
 
   def ensure_snooze_until_reset

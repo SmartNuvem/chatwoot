@@ -22,6 +22,22 @@ import {
   CONVERSATION_VISIBILITY_MODES,
 } from 'dashboard/helper/teamConversationRestriction';
 
+const DEFAULT_RESOLVED_MESSAGE_TEXT = `Agradecemos por entrar em contato conosco 😊
+
+Permanecemos à disposição para qualquer necessidade futura.
+
+Desejamos um excelente dia!
+
+Atenciosamente,
+Equipe {{account.name}}`;
+
+const DEFAULT_AUTO_RESOLVE_INACTIVE_CONVERSATIONS_MESSAGE = `Como não tivemos novas interações, estamos finalizando este atendimento automaticamente. 😊
+
+Caso precise de algo, basta enviar uma nova mensagem.
+
+Atenciosamente,
+Equipe {{account.name}}`;
+
 export default {
   components: {
     BaseSettingsHeader,
@@ -52,6 +68,12 @@ export default {
       supportEmail: '',
       conversationVisibilityMode: CONVERSATION_VISIBILITY_MODES.DEFAULT,
       clearLabelsOnResolved: false,
+      resolvedMessageEnabled: false,
+      resolvedMessageText: DEFAULT_RESOLVED_MESSAGE_TEXT,
+      autoResolveInactiveConversationsEnabled: false,
+      autoResolveInactiveConversationsMinutes: 60,
+      autoResolveInactiveConversationsMessage:
+        DEFAULT_AUTO_RESOLVE_INACTIVE_CONVERSATIONS_MESSAGE,
       features: {},
     };
   },
@@ -164,6 +186,16 @@ export default {
         this.conversationVisibilityMode =
           resolveConversationVisibilityMode(settings);
         this.clearLabelsOnResolved = !!settings?.clear_labels_on_resolved;
+        this.resolvedMessageEnabled = !!settings?.resolved_message_enabled;
+        this.resolvedMessageText =
+          settings?.resolved_message_text || DEFAULT_RESOLVED_MESSAGE_TEXT;
+        this.autoResolveInactiveConversationsEnabled =
+          !!settings?.auto_resolve_inactive_conversations_enabled;
+        this.autoResolveInactiveConversationsMinutes =
+          Number(settings?.auto_resolve_inactive_conversations_minutes || 60);
+        this.autoResolveInactiveConversationsMessage =
+          settings?.auto_resolve_inactive_conversations_message ||
+          DEFAULT_AUTO_RESOLVE_INACTIVE_CONVERSATIONS_MESSAGE;
         this.features = features;
       } catch (error) {
         // Ignore error
@@ -184,6 +216,14 @@ export default {
           support_email: this.supportEmail,
           conversation_visibility_mode: this.conversationVisibilityMode,
           clear_labels_on_resolved: this.clearLabelsOnResolved,
+          resolved_message_enabled: this.resolvedMessageEnabled,
+          resolved_message_text: this.resolvedMessageText,
+          auto_resolve_inactive_conversations_enabled:
+            this.autoResolveInactiveConversationsEnabled,
+          auto_resolve_inactive_conversations_minutes:
+            Number(this.autoResolveInactiveConversationsMinutes),
+          auto_resolve_inactive_conversations_message:
+            this.autoResolveInactiveConversationsMessage,
         });
         // If user locale is set, update the locale with user locale
         const updatedLocale = this.uiSettings?.locale || this.locale;
@@ -229,6 +269,46 @@ export default {
       } catch (error) {
         useAlert(
           this.$t('GENERAL_SETTINGS.FORM.CLEAR_LABELS_ON_RESOLVED.API.ERROR')
+        );
+      }
+    },
+
+    async updateResolvedMessageSettings() {
+      try {
+        await this.$store.dispatch('accounts/update', {
+          resolved_message_enabled: this.resolvedMessageEnabled,
+          resolved_message_text: this.resolvedMessageText,
+          options: { silent: true },
+        });
+        useAlert(
+          this.$t('GENERAL_SETTINGS.FORM.RESOLVED_MESSAGE.API.SUCCESS')
+        );
+      } catch (error) {
+        useAlert(this.$t('GENERAL_SETTINGS.FORM.RESOLVED_MESSAGE.API.ERROR'));
+      }
+    },
+
+    async updateAutoResolveInactiveConversationsSettings() {
+      try {
+        await this.$store.dispatch('accounts/update', {
+          auto_resolve_inactive_conversations_enabled:
+            this.autoResolveInactiveConversationsEnabled,
+          auto_resolve_inactive_conversations_minutes:
+            Number(this.autoResolveInactiveConversationsMinutes),
+          auto_resolve_inactive_conversations_message:
+            this.autoResolveInactiveConversationsMessage,
+          options: { silent: true },
+        });
+        useAlert(
+          this.$t(
+            'GENERAL_SETTINGS.FORM.AUTO_RESOLVE_INACTIVE_CONVERSATIONS.API.SUCCESS'
+          )
+        );
+      } catch (error) {
+        useAlert(
+          this.$t(
+            'GENERAL_SETTINGS.FORM.AUTO_RESOLVE_INACTIVE_CONVERSATIONS.API.ERROR'
+          )
         );
       }
     },
@@ -374,6 +454,82 @@ export default {
           />
         </div>
       </template>
+    </SectionLayout>
+    <SectionLayout
+      v-if="!uiFlags.isFetchingItem"
+      :title="$t('GENERAL_SETTINGS.FORM.RESOLVED_MESSAGE.TITLE')"
+      :description="$t('GENERAL_SETTINGS.FORM.RESOLVED_MESSAGE.NOTE')"
+      with-border
+    >
+      <template #headerActions>
+        <div class="flex justify-end">
+          <Switch
+            v-model="resolvedMessageEnabled"
+            @change="updateResolvedMessageSettings"
+          />
+        </div>
+      </template>
+      <WithLabel
+        name="resolved-message-text"
+        :label="$t('GENERAL_SETTINGS.FORM.RESOLVED_MESSAGE.MESSAGE_LABEL')"
+      >
+        <textarea
+          v-model="resolvedMessageText"
+          class="w-full min-h-[160px] text-sm"
+          @blur="updateResolvedMessageSettings"
+        />
+      </WithLabel>
+    </SectionLayout>
+    <SectionLayout
+      v-if="!uiFlags.isFetchingItem"
+      :title="
+        $t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE_INACTIVE_CONVERSATIONS.TITLE')
+      "
+      :description="
+        $t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE_INACTIVE_CONVERSATIONS.NOTE')
+      "
+      with-border
+    >
+      <template #headerActions>
+        <div class="flex justify-end">
+          <Switch
+            v-model="autoResolveInactiveConversationsEnabled"
+            @change="updateAutoResolveInactiveConversationsSettings"
+          />
+        </div>
+      </template>
+      <div class="grid gap-4">
+        <WithLabel
+          name="auto-resolve-inactive-conversations-minutes"
+          :label="
+            $t(
+              'GENERAL_SETTINGS.FORM.AUTO_RESOLVE_INACTIVE_CONVERSATIONS.MINUTES_LABEL'
+            )
+          "
+        >
+          <NextInput
+            v-model.number="autoResolveInactiveConversationsMinutes"
+            type="number"
+            min="1"
+            class="w-full"
+            @blur="updateAutoResolveInactiveConversationsSettings"
+          />
+        </WithLabel>
+        <WithLabel
+          name="auto-resolve-inactive-conversations-message"
+          :label="
+            $t(
+              'GENERAL_SETTINGS.FORM.AUTO_RESOLVE_INACTIVE_CONVERSATIONS.MESSAGE_LABEL'
+            )
+          "
+        >
+          <textarea
+            v-model="autoResolveInactiveConversationsMessage"
+            class="w-full min-h-[160px] text-sm"
+            @blur="updateAutoResolveInactiveConversationsSettings"
+          />
+        </WithLabel>
+      </div>
     </SectionLayout>
     <AudioTranscription v-if="showAudioTranscriptionConfig" />
     <AccountId />

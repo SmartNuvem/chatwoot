@@ -32,4 +32,28 @@ RSpec.describe Conversation do
       expect(conversation.reload.label_list).to be_empty
     end
   end
+
+  describe 'sending resolved message on resolve' do
+    it 'sends the resolved message when the account setting is enabled' do
+      account.update!(
+        settings: {
+          resolved_message_enabled: true,
+          resolved_message_text: 'Atendimento finalizado por {{account.name}}'
+        }
+      )
+
+      conversation.resolved!
+
+      message = conversation.messages.outgoing.last
+      expect(message.content).to eq('Atendimento finalizado por ' + account.name)
+      expect(message.content_attributes['automation_source']).to eq(Conversations::SendResolvedMessageService::SOURCE)
+    end
+
+    it 'does not send a resolved message when the conversation is reopened' do
+      account.update!(settings: { resolved_message_enabled: true, resolved_message_text: 'Atendimento finalizado' })
+      conversation.resolved!
+
+      expect { conversation.open! }.not_to change { conversation.messages.outgoing.count }
+    end
+  end
 end
