@@ -29,7 +29,9 @@ RSpec.describe Inbox do
 
     it { is_expected.to have_one(:agent_bot_inbox) }
 
-    it { is_expected.to have_many(:webhooks).dependent(:destroy_async) }
+    it { is_expected.to have_many(:webhook_inboxes).dependent(:destroy) }
+
+    it { is_expected.to have_many(:webhooks).through(:webhook_inboxes) }
 
     it { is_expected.to have_many(:reporting_events) }
 

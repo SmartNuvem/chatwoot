@@ -7,6 +7,8 @@ RSpec.describe Webhook do
 
   describe 'associations' do
     it { is_expected.to belong_to(:account) }
+    it { is_expected.to have_many(:webhook_inboxes).dependent(:destroy) }
+    it { is_expected.to have_many(:inboxes).through(:webhook_inboxes) }
   end
 
   describe 'secret token' do

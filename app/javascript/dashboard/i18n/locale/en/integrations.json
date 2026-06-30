@@ -65,6 +65,13 @@
           "LABEL": "Webhook Name",
           "PLACEHOLDER": "Enter the name of the webhook"
         },
+        "INBOXES": {
+          "LABEL": "Inboxes",
+          "PLACEHOLDER": "Select inboxes",
+          "SEARCH_PLACEHOLDER": "Search inboxes...",
+          "EMPTY": "No inboxes found",
+          "DESCRIPTION": "Select which inboxes can trigger this webhook. If none are selected, the webhook will continue receiving events from all inboxes."
+        },
         "END_POINT": {
           "LABEL": "Webhook URL",
           "PLACEHOLDER": "Example: {webhookExampleURL}",

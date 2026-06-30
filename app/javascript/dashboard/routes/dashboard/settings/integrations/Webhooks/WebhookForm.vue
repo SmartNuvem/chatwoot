@@ -7,6 +7,7 @@ import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import { useAlert } from 'dashboard/composables';
 import { useConfig } from 'dashboard/composables/useConfig';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import TagMultiSelectComboBox from 'dashboard/components-next/combobox/TagMultiSelectComboBox.vue';
 
 const { EXAMPLE_WEBHOOK_URL } = wootConstants;
 
@@ -26,6 +27,7 @@ const SUPPORTED_WEBHOOK_EVENTS = [
 export default {
   components: {
     NextButton,
+    TagMultiSelectComboBox,
   },
   props: {
     value: {
@@ -61,6 +63,8 @@ export default {
       url: this.value.url || '',
       name: this.value.name || '',
       subscriptions: this.value.subscriptions || [],
+      selectedInboxIds:
+        this.value.inbox_ids || this.value.inboxes?.map(inbox => inbox.id) || [],
       secretVisible: false,
       supportedWebhookEvents: inboxEventsEnabled
         ? [...SUPPORTED_WEBHOOK_EVENTS, 'inbox_updated']
@@ -82,12 +86,24 @@ export default {
     webhookNameInputPlaceholder() {
       return this.$t('INTEGRATION_SETTINGS.WEBHOOK.FORM.NAME.PLACEHOLDER');
     },
+    inboxOptions() {
+      return this.$store.getters['inboxes/getInboxes'].map(inbox => ({
+        value: inbox.id,
+        label: inbox.name,
+      }));
+    },
+  },
+  mounted() {
+    if (!this.inboxOptions.length) {
+      this.$store.dispatch('inboxes/get');
+    }
   },
   methods: {
     onSubmit() {
       this.$emit('submit', {
         url: this.url,
         name: this.name,
+        inbox_ids: this.selectedInboxIds,
         subscriptions: this.subscriptions,
       });
     },
@@ -154,6 +170,22 @@ export default {
           />
         </div>
       </label>
+      <label class="mb-2">
+        {{ $t('INTEGRATION_SETTINGS.WEBHOOK.FORM.INBOXES.LABEL') }}
+      </label>
+      <TagMultiSelectComboBox
+        v-model="selectedInboxIds"
+        :options="inboxOptions"
+        :placeholder="
+          $t('INTEGRATION_SETTINGS.WEBHOOK.FORM.INBOXES.PLACEHOLDER')
+        "
+        :search-placeholder="
+          $t('INTEGRATION_SETTINGS.WEBHOOK.FORM.INBOXES.SEARCH_PLACEHOLDER')
+        "
+        :empty-state="$t('INTEGRATION_SETTINGS.WEBHOOK.FORM.INBOXES.EMPTY')"
+        :message="$t('INTEGRATION_SETTINGS.WEBHOOK.FORM.INBOXES.DESCRIPTION')"
+        class="mb-4"
+      />
       <label :class="{ error: v$.url.$error }" class="mb-2">
         {{ $t('INTEGRATION_SETTINGS.WEBHOOK.FORM.SUBSCRIPTIONS.LABEL') }}
       </label>

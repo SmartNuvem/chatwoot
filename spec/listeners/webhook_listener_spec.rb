@@ -34,6 +34,48 @@ describe WebhookListener do
         ).once
         listener.message_created(message_created_event)
       end
+
+      it 'only triggers webhooks matching the event inbox and global webhooks' do
+        loja_1 = create(:inbox, account: account, name: 'Loja 1')
+        loja_2 = create(:inbox, account: account, name: 'Loja 2')
+        loja_1_conversation = create(:conversation, account: account, inbox: loja_1)
+        loja_2_conversation = create(:conversation, account: account, inbox: loja_2)
+        loja_1_message = create(:message, message_type: 'outgoing', account: account, inbox: loja_1, conversation: loja_1_conversation)
+        loja_2_message = create(:message, message_type: 'outgoing', account: account, inbox: loja_2, conversation: loja_2_conversation)
+        loja_1_event = Events::Base.new(event_name, Time.zone.now, message: loja_1_message)
+        loja_2_event = Events::Base.new(event_name, Time.zone.now, message: loja_2_message)
+        loja_1_webhook = create(:webhook, account: account, inbox: loja_1, url: 'https://loja1.example.com')
+        loja_2_webhook = create(:webhook, account: account, inbox: loja_2, url: 'https://loja2.example.com')
+        global_webhook = create(:webhook, account: account, url: 'https://global.example.com')
+
+        expect(WebhookJob).to receive(:perform_later).with(
+          loja_1_webhook.url, loja_1_message.webhook_data.merge(event: 'message_created'), :account_webhook,
+          secret: loja_1_webhook.secret, delivery_id: instance_of(String)
+        ).once
+        expect(WebhookJob).to receive(:perform_later).with(
+          global_webhook.url, loja_1_message.webhook_data.merge(event: 'message_created'), :account_webhook,
+          secret: global_webhook.secret, delivery_id: instance_of(String)
+        ).once
+        expect(WebhookJob).not_to receive(:perform_later).with(
+          loja_2_webhook.url, loja_1_message.webhook_data.merge(event: 'message_created'), :account_webhook,
+          secret: loja_2_webhook.secret, delivery_id: instance_of(String)
+        )
+        listener.message_created(loja_1_event)
+
+        expect(WebhookJob).to receive(:perform_later).with(
+          loja_2_webhook.url, loja_2_message.webhook_data.merge(event: 'message_created'), :account_webhook,
+          secret: loja_2_webhook.secret, delivery_id: instance_of(String)
+        ).once
+        expect(WebhookJob).to receive(:perform_later).with(
+          global_webhook.url, loja_2_message.webhook_data.merge(event: 'message_created'), :account_webhook,
+          secret: global_webhook.secret, delivery_id: instance_of(String)
+        ).once
+        expect(WebhookJob).not_to receive(:perform_later).with(
+          loja_1_webhook.url, loja_2_message.webhook_data.merge(event: 'message_created'), :account_webhook,
+          secret: loja_1_webhook.secret, delivery_id: instance_of(String)
+        )
+        listener.message_created(loja_2_event)
+      end
     end
 
     context 'when webhook is configured and event is not subscribed' do
@@ -203,6 +245,21 @@ describe WebhookListener do
         expect(WebhookJob).to receive(:perform_later).with(
           webhook.url, contact.webhook_data.merge(event: 'contact_created'), :account_webhook,
           secret: webhook.secret, delivery_id: instance_of(String)
+        ).once
+        listener.contact_created(contact_event)
+      end
+
+      it 'does not trigger inbox-filtered webhooks when the event has no inbox' do
+        filtered_webhook = create(:webhook, account: account, inbox: inbox)
+        global_webhook = create(:webhook, account: account, url: 'https://global.example.com')
+
+        expect(WebhookJob).not_to receive(:perform_later).with(
+          filtered_webhook.url, contact.webhook_data.merge(event: 'contact_created'), :account_webhook,
+          secret: filtered_webhook.secret, delivery_id: instance_of(String)
+        )
+        expect(WebhookJob).to receive(:perform_later).with(
+          global_webhook.url, contact.webhook_data.merge(event: 'contact_created'), :account_webhook,
+          secret: global_webhook.secret, delivery_id: instance_of(String)
         ).once
         listener.contact_created(contact_event)
       end

@@ -41,17 +41,18 @@ RSpec.describe 'Webhooks API', type: :request do
     context 'when it is an authenticated admin user' do
       it 'creates webhook' do
         post "/api/v1/accounts/#{account.id}/webhooks",
-             params: { account_id: account.id, inbox_id: inbox.id, url: 'https://hello.com' },
+             params: { webhook: { inbox_ids: [inbox.id], url: 'https://hello.com' } },
              headers: administrator.create_new_auth_token,
              as: :json
         expect(response).to have_http_status(:success)
 
         expect(response.parsed_body['payload']['webhook']['url']).to eql 'https://hello.com'
+        expect(response.parsed_body['payload']['webhook']['inbox_ids']).to contain_exactly(inbox.id)
       end
 
       it 'creates webhook with name' do
         post "/api/v1/accounts/#{account.id}/webhooks",
-             params: { account_id: account.id, inbox_id: inbox.id, url: 'https://hello.com', name: 'My Webhook' },
+             params: { webhook: { inbox_ids: [inbox.id], url: 'https://hello.com', name: 'My Webhook' } },
              headers: administrator.create_new_auth_token,
              as: :json
         expect(response).to have_http_status(:success)
@@ -61,7 +62,7 @@ RSpec.describe 'Webhooks API', type: :request do
 
       it 'throws error when invalid url provided' do
         post "/api/v1/accounts/#{account.id}/webhooks",
-             params: { account_id: account.id, inbox_id: inbox.id, url: 'javascript:alert(1)' },
+             params: { webhook: { inbox_ids: [inbox.id], url: 'javascript:alert(1)' } },
              headers: administrator.create_new_auth_token,
              as: :json
         expect(response).to have_http_status(:unprocessable_entity)
@@ -70,7 +71,7 @@ RSpec.describe 'Webhooks API', type: :request do
 
       it 'throws error if subscription events are invalid' do
         post "/api/v1/accounts/#{account.id}/webhooks",
-             params: { url: 'https://hello.com', subscriptions: ['conversation_random_event'] },
+             params: { webhook: { url: 'https://hello.com', subscriptions: ['conversation_random_event'] } },
              headers: administrator.create_new_auth_token,
              as: :json
         expect(response).to have_http_status(:unprocessable_entity)
@@ -79,7 +80,7 @@ RSpec.describe 'Webhooks API', type: :request do
 
       it 'throws error if subscription events are empty' do
         post "/api/v1/accounts/#{account.id}/webhooks",
-             params: { url: 'https://hello.com', subscriptions: [] },
+             params: { webhook: { url: 'https://hello.com', subscriptions: [] } },
              headers: administrator.create_new_auth_token,
              as: :json
         expect(response).to have_http_status(:unprocessable_entity)
@@ -88,7 +89,7 @@ RSpec.describe 'Webhooks API', type: :request do
 
       it 'use default if subscription events are nil' do
         post "/api/v1/accounts/#{account.id}/webhooks",
-             params: { url: 'https://hello.com', subscriptions: nil },
+             params: { webhook: { url: 'https://hello.com', subscriptions: nil } },
              headers: administrator.create_new_auth_token,
              as: :json
         expect(response).to have_http_status(:ok)
@@ -96,6 +97,18 @@ RSpec.describe 'Webhooks API', type: :request do
           response.parsed_body['payload']['webhook']['subscriptions']
         ).to eql %w[conversation_status_changed conversation_updated conversation_created contact_created contact_updated
                     message_created message_updated webwidget_triggered]
+      end
+
+      it 'does not allow inboxes from another account' do
+        other_inbox = create(:inbox)
+
+        post "/api/v1/accounts/#{account.id}/webhooks",
+             params: { webhook: { inbox_ids: [other_inbox.id], url: 'https://hello.com' } },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['message']).to include('Inbox ids')
       end
     end
   end
@@ -113,12 +126,34 @@ RSpec.describe 'Webhooks API', type: :request do
     context 'when it is an authenticated admin user' do
       it 'updates webhook' do
         put "/api/v1/accounts/#{account.id}/webhooks/#{webhook.id}",
-            params: { url: 'https://hello.com', name: 'Another Webhook' },
+            params: { webhook: { url: 'https://hello.com', name: 'Another Webhook' } },
             headers: administrator.create_new_auth_token,
             as: :json
         expect(response).to have_http_status(:success)
         expect(response.parsed_body['payload']['webhook']['url']).to eql 'https://hello.com'
         expect(response.parsed_body['payload']['webhook']['name']).to eql 'Another Webhook'
+      end
+
+      it 'updates webhook inbox filters' do
+        second_inbox = create(:inbox, account: account)
+
+        put "/api/v1/accounts/#{account.id}/webhooks/#{webhook.id}",
+            params: { webhook: { inbox_ids: [second_inbox.id] } },
+            headers: administrator.create_new_auth_token,
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body['payload']['webhook']['inbox_ids']).to contain_exactly(second_inbox.id)
+      end
+
+      it 'clears webhook inbox filters' do
+        put "/api/v1/accounts/#{account.id}/webhooks/#{webhook.id}",
+            params: { webhook: { inbox_ids: [] } },
+            headers: administrator.create_new_auth_token,
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body['payload']['webhook']['inbox_ids']).to be_empty
       end
     end
   end

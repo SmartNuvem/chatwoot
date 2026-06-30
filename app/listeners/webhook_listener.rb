@@ -70,7 +70,7 @@ class WebhookListener < BaseListener
     inbox, account = extract_inbox_and_account(event)
     inbox_webhook_data = Inbox::EventDataPresenter.new(inbox).webhook_data
     payload = inbox_webhook_data.merge(event: __method__.to_s)
-    deliver_account_webhooks(payload, account)
+    deliver_account_webhooks(payload, account, inbox)
   end
 
   def inbox_updated(event)
@@ -80,7 +80,7 @@ class WebhookListener < BaseListener
 
     inbox_webhook_data = Inbox::EventDataPresenter.new(inbox).webhook_data
     payload = inbox_webhook_data.merge(event: __method__.to_s, changed_attributes: changed_attributes)
-    deliver_account_webhooks(payload, account)
+    deliver_account_webhooks(payload, account, inbox)
   end
 
   def conversation_typing_on(event)
@@ -107,9 +107,12 @@ class WebhookListener < BaseListener
     deliver_webhook_payloads(payload, inbox)
   end
 
-  def deliver_account_webhooks(payload, account)
-    account.webhooks.account_type.each do |webhook|
+  def deliver_account_webhooks(payload, account, inbox = nil)
+    account.webhooks.account_type.includes(:inboxes).each do |webhook|
+      webhook_inbox_ids = webhook.inboxes.map(&:id)
+
       next unless webhook.subscriptions.include?(payload[:event])
+      next if webhook_inbox_ids.present? && (inbox.blank? || webhook_inbox_ids.exclude?(inbox.id))
 
       WebhookJob.perform_later(webhook.url, payload, :account_webhook,
                                secret: webhook.secret,
@@ -126,7 +129,7 @@ class WebhookListener < BaseListener
   end
 
   def deliver_webhook_payloads(payload, inbox)
-    deliver_account_webhooks(payload, inbox.account)
+    deliver_account_webhooks(payload, inbox.account, inbox)
     deliver_api_inbox_webhooks(payload, inbox)
   end
 end

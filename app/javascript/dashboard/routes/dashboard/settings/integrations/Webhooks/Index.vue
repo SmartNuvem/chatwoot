@@ -60,6 +60,7 @@ export default {
   mounted() {
     this.$store.dispatch('integrations/get', 'webhook');
     this.$store.dispatch('webhooks/get');
+    this.$store.dispatch('inboxes/get');
   },
   methods: {
     openAddPopup() {

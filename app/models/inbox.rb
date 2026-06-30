@@ -72,7 +72,8 @@ class Inbox < ApplicationRecord
   has_one :assignment_policy, through: :inbox_assignment_policy
   has_one :agent_bot_inbox, dependent: :destroy_async
   has_one :agent_bot, through: :agent_bot_inbox
-  has_many :webhooks, dependent: :destroy_async
+  has_many :webhook_inboxes, dependent: :destroy
+  has_many :webhooks, through: :webhook_inboxes
   has_many :hooks, dependent: :destroy_async, class_name: 'Integrations::Hook'
 
   enum sender_name_type: { friendly: 0, professional: 1 }

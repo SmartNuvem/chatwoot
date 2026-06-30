@@ -4,9 +4,10 @@ json.url webhook.url
 json.account_id webhook.account_id
 json.subscriptions webhook.subscriptions
 json.secret webhook.secret
-if webhook.inbox
-  json.inbox do
-    json.id webhook.inbox.id
-    json.name webhook.inbox.name
+json.inbox_ids webhook.inbox_ids
+json.inboxes do
+  json.array! webhook.inboxes do |inbox|
+    json.id inbox.id
+    json.name inbox.name
   end
 end
