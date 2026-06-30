@@ -33,6 +33,7 @@ class Conversations::AutoResolveInactiveConversationsService
       send_auto_resolve_message(conversation)
       conversation.skip_resolved_message = true
       conversation.resolved!
+      clear_labels(conversation)
     end
   end
 
@@ -43,5 +44,9 @@ class Conversations::AutoResolveInactiveConversationsService
       source: SOURCE,
       sender: conversation.assignee
     ).perform
+  end
+
+  def clear_labels(conversation)
+    Conversations::ClearLabelsOnResolvedService.new(conversation: conversation, force: true).perform
   end
 end

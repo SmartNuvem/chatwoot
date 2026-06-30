@@ -22,6 +22,14 @@ RSpec.describe Conversations::ClearLabelsOnResolvedService do
       expect(conversation.reload.label_list).to be_empty
     end
 
+    it 'removes all labels when forced' do
+      conversation.add_labels(%w[support priority_customer])
+
+      described_class.new(conversation: conversation, force: true).perform
+
+      expect(conversation.reload.label_list).to be_empty
+    end
+
     it 'does nothing when the conversation has no labels' do
       account.update!(settings: { clear_labels_on_resolved: true })
 

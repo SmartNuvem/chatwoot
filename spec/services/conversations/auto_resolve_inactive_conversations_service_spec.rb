@@ -73,13 +73,12 @@ RSpec.describe Conversations::AutoResolveInactiveConversationsService do
       expect(automation_messages.count).to eq(1)
     end
 
-    it 'runs label cleanup after resolving' do
+    it 'removes labels after resolving even when the label cleanup setting is disabled' do
       account.update!(
         settings: {
           auto_resolve_inactive_conversations_enabled: true,
           auto_resolve_inactive_conversations_minutes: 30,
-          auto_resolve_inactive_conversations_message: 'Finalizando',
-          clear_labels_on_resolved: true
+          auto_resolve_inactive_conversations_message: 'Finalizando'
         }
       )
       conversation.add_labels(%w[support priority_customer])
