@@ -47,6 +47,7 @@ export default {
       domain: '',
       supportEmail: '',
       restrictConversationsByTeam: false,
+      clearLabelsOnResolved: false,
       features: {},
     };
   },
@@ -127,6 +128,7 @@ export default {
         this.supportEmail = support_email;
         this.restrictConversationsByTeam =
           !!settings?.restrict_conversations_by_team;
+        this.clearLabelsOnResolved = !!settings?.clear_labels_on_resolved;
         this.features = features;
       } catch (error) {
         // Ignore error
@@ -146,6 +148,7 @@ export default {
           domain: this.domain,
           support_email: this.supportEmail,
           restrict_conversations_by_team: this.restrictConversationsByTeam,
+          clear_labels_on_resolved: this.clearLabelsOnResolved,
         });
         // If user locale is set, update the locale with user locale
         const updatedLocale = this.uiSettings?.locale || this.locale;
@@ -175,6 +178,22 @@ export default {
           this.$t(
             'GENERAL_SETTINGS.FORM.RESTRICT_CONVERSATIONS_BY_TEAM.API.ERROR'
           )
+        );
+      }
+    },
+
+    async updateClearLabelsOnResolved() {
+      try {
+        await this.$store.dispatch('accounts/update', {
+          clear_labels_on_resolved: this.clearLabelsOnResolved,
+          options: { silent: true },
+        });
+        useAlert(
+          this.$t('GENERAL_SETTINGS.FORM.CLEAR_LABELS_ON_RESOLVED.API.SUCCESS')
+        );
+      } catch (error) {
+        useAlert(
+          this.$t('GENERAL_SETTINGS.FORM.CLEAR_LABELS_ON_RESOLVED.API.ERROR')
         );
       }
     },
@@ -286,6 +305,21 @@ export default {
           <Switch
             v-model="restrictConversationsByTeam"
             @change="updateConversationVisibilityRestriction"
+          />
+        </div>
+      </template>
+    </SectionLayout>
+    <SectionLayout
+      v-if="!uiFlags.isFetchingItem"
+      :title="$t('GENERAL_SETTINGS.FORM.CLEAR_LABELS_ON_RESOLVED.TITLE')"
+      :description="$t('GENERAL_SETTINGS.FORM.CLEAR_LABELS_ON_RESOLVED.NOTE')"
+      with-border
+    >
+      <template #headerActions>
+        <div class="flex justify-end">
+          <Switch
+            v-model="clearLabelsOnResolved"
+            @change="updateClearLabelsOnResolved"
           />
         </div>
       </template>

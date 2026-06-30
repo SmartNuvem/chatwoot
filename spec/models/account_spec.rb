@@ -9,6 +9,12 @@ RSpec.describe Account do
     end
   end
 
+  describe '#clear_labels_on_resolved?' do
+    it 'defaults to false' do
+      expect(described_class.new.clear_labels_on_resolved?).to be false
+    end
+  end
+
   it { is_expected.to have_many(:users).through(:account_users) }
   it { is_expected.to have_many(:account_users) }
   it { is_expected.to have_many(:inboxes).dependent(:destroy_async) }

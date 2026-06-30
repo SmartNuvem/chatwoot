@@ -112,6 +112,14 @@
           "ERROR": "Failed to update conversation visibility setting"
         }
       },
+      "CLEAR_LABELS_ON_RESOLVED": {
+        "TITLE": "Limpar etiquetas ao resolver",
+        "NOTE": "Quando ativado, todas as etiquetas da conversa serão removidas automaticamente ao marcar a conversa como resolvida.",
+        "API": {
+          "SUCCESS": "Configuração de limpeza de etiquetas atualizada com sucesso",
+          "ERROR": "Falha ao atualizar configuração de limpeza de etiquetas"
+        }
+      },
       "AUTO_RESOLVE_DURATION": {
         "LABEL": "Inactivity duration for resolution",
         "HELP": "Duration after a conversation should auto resolve if there is no activity",

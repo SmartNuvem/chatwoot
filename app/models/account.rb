@@ -52,6 +52,7 @@ class Account < ApplicationRecord
 
   store_accessor :settings, :audio_transcriptions, :auto_resolve_label
   store_accessor :settings, :restrict_conversations_by_team
+  store_accessor :settings, :clear_labels_on_resolved
   store_accessor :settings, :captain_models, :captain_features
   store_accessor :settings, :reporting_timezone
   store_accessor :settings, :keep_pending_on_bot_failure
@@ -156,6 +157,10 @@ class Account < ApplicationRecord
 
   def restrict_conversations_by_team?
     ActiveModel::Type::Boolean.new.cast(restrict_conversations_by_team)
+  end
+
+  def clear_labels_on_resolved?
+    ActiveModel::Type::Boolean.new.cast(clear_labels_on_resolved)
   end
 
   def locale_english_name

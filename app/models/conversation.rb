@@ -248,6 +248,7 @@ class Conversation < ApplicationRecord
     notify_status_change
     create_activity
     notify_conversation_updation
+    clear_labels_on_resolved
   end
 
   def handle_resolved_status_change
@@ -257,6 +258,12 @@ class Conversation < ApplicationRecord
     # rubocop:disable Rails/SkipsModelValidations
     update_column(:waiting_since, nil)
     # rubocop:enable Rails/SkipsModelValidations
+  end
+
+  def clear_labels_on_resolved
+    return unless saved_change_to_status? && resolved?
+
+    Conversations::ClearLabelsOnResolvedService.new(conversation: self).perform
   end
 
   def ensure_snooze_until_reset

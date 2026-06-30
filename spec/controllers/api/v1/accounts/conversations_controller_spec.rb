@@ -520,6 +520,19 @@ RSpec.describe 'Conversations API', type: :request do
         expect(conversation.reload.status).to eq('resolved')
       end
 
+      it 'removes labels when resolving through the API and the account setting is enabled' do
+        account.update!(settings: { clear_labels_on_resolved: true })
+        conversation.add_labels(%w[support priority_customer])
+
+        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/toggle_status",
+             headers: agent.create_new_auth_token,
+             params: { status: 'resolved' },
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(conversation.reload.label_list).to be_empty
+      end
+
       it 'toggles the conversation status to open from pending' do
         conversation.update!(status: 'pending')
 

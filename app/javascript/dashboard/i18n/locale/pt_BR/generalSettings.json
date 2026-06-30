@@ -112,6 +112,14 @@
           "ERROR": "Falha ao atualizar configuração de visualização de conversas"
         }
       },
+      "CLEAR_LABELS_ON_RESOLVED": {
+        "TITLE": "Limpar etiquetas ao resolver",
+        "NOTE": "Quando ativado, todas as etiquetas da conversa serão removidas automaticamente ao marcar a conversa como resolvida.",
+        "API": {
+          "SUCCESS": "Configuração de limpeza de etiquetas atualizada com sucesso",
+          "ERROR": "Falha ao atualizar configuração de limpeza de etiquetas"
+        }
+      },
       "AUTO_RESOLVE_DURATION": {
         "LABEL": "Tempo de inatividade para resolução",
         "HELP": "Tempo de inatividade após o qual a conversa deve ser encerrada automaticamente",
