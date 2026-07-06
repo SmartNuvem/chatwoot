@@ -20,16 +20,24 @@ RSpec.describe Conversations::AutoResolveInactiveConversationsService do
         settings: {
           auto_resolve_inactive_conversations_enabled: true,
           auto_resolve_inactive_conversations_minutes: 30,
-          auto_resolve_inactive_conversations_message: 'Olá {{contact.name}} - {{account.name}} - {{agent.name}}'
+          auto_resolve_inactive_conversations_message: 'Ola {{contact.name}} - {{account.name}} - {{agent.name}}'
         }
       )
-      conversation.update!(last_activity_at: 31.minutes.ago)
+      create(
+        :message,
+        account: account,
+        inbox: conversation.inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        sender: agent,
+        created_at: 31.minutes.ago
+      )
 
       described_class.new(account: account).perform
 
       expect(conversation.reload).to be_resolved
       expect(automation_messages.count).to eq(1)
-      expect(automation_messages.last.content).to eq('Olá Maria - Smart Nuvem - Ana')
+      expect(automation_messages.last.content).to eq('Ola Maria - Smart Nuvem - Ana')
     end
 
     it 'does not resolve conversations before the configured time' do
@@ -40,7 +48,15 @@ RSpec.describe Conversations::AutoResolveInactiveConversationsService do
           auto_resolve_inactive_conversations_message: 'Finalizando'
         }
       )
-      conversation.update!(last_activity_at: 10.minutes.ago)
+      create(
+        :message,
+        account: account,
+        inbox: conversation.inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        sender: agent,
+        created_at: 10.minutes.ago
+      )
 
       described_class.new(account: account).perform
 
@@ -56,7 +72,15 @@ RSpec.describe Conversations::AutoResolveInactiveConversationsService do
           auto_resolve_inactive_conversations_message: 'Finalizando'
         }
       )
-      conversation.update!(last_activity_at: 31.minutes.ago)
+      create(
+        :message,
+        account: account,
+        inbox: conversation.inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        sender: agent,
+        created_at: 31.minutes.ago
+      )
       create(
         :message,
         account: account,
@@ -82,7 +106,15 @@ RSpec.describe Conversations::AutoResolveInactiveConversationsService do
         }
       )
       conversation.add_labels(%w[support priority_customer])
-      conversation.update!(last_activity_at: 31.minutes.ago)
+      create(
+        :message,
+        account: account,
+        inbox: conversation.inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        sender: agent,
+        created_at: 31.minutes.ago
+      )
 
       described_class.new(account: account).perform
 
