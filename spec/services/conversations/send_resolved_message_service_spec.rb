@@ -27,6 +27,25 @@ RSpec.describe Conversations::SendResolvedMessageService do
       expect(automation_messages.last.content).to eq('Obrigado Maria - Smart Nuvem - Ana')
     end
 
+    it 'uses the inbox resolved message when configured' do
+      account.update!(settings: { resolved_message_enabled: true, resolved_message_text: 'Obrigado' })
+      conversation.inbox.update!(resolved_message_enabled: true, resolved_message_text: 'Finalizado por {{agent.name}}')
+
+      described_class.new(conversation: conversation).perform
+
+      expect(automation_messages.count).to eq(1)
+      expect(automation_messages.last.content).to eq('Finalizado por Ana')
+    end
+
+    it 'does not send when the inbox disables resolved messages' do
+      account.update!(settings: { resolved_message_enabled: true, resolved_message_text: 'Obrigado' })
+      conversation.inbox.update!(resolved_message_enabled: false, resolved_message_text: nil)
+
+      described_class.new(conversation: conversation).perform
+
+      expect(automation_messages.count).to eq(0)
+    end
+
     it 'does not send duplicate messages' do
       account.update!(settings: { resolved_message_enabled: true, resolved_message_text: 'Obrigado' })
 

@@ -18,6 +18,7 @@ RSpec.describe Conversations::AutoResolveInactiveConversationsService do
     it 'resolves inactive conversations and sends the configured message' do
       account.update!(
         settings: {
+          resolved_message_enabled: true,
           auto_resolve_inactive_conversations_enabled: true,
           auto_resolve_inactive_conversations_minutes: 30,
           auto_resolve_inactive_conversations_message: 'Ola {{contact.name}} - {{account.name}} - {{agent.name}}'
@@ -62,6 +63,58 @@ RSpec.describe Conversations::AutoResolveInactiveConversationsService do
 
       expect(conversation.reload).to be_open
       expect(automation_messages.count).to eq(0)
+    end
+
+    it 'does not resolve when the inbox disables inactive conversation auto resolve' do
+      account.update!(
+        settings: {
+          auto_resolve_inactive_conversations_enabled: true,
+          auto_resolve_inactive_conversations_minutes: 30,
+          auto_resolve_inactive_conversations_message: 'Finalizando'
+        }
+      )
+      conversation.inbox.update!(auto_resolve_inactive_conversations_enabled: false)
+      create(
+        :message,
+        account: account,
+        inbox: conversation.inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        sender: agent,
+        created_at: 31.minutes.ago
+      )
+
+      described_class.new(account: account).perform
+
+      expect(conversation.reload).to be_open
+      expect(automation_messages.count).to eq(0)
+    end
+
+    it 'uses the inbox inactive conversation auto resolve time when configured' do
+      account.update!(
+        settings: {
+          auto_resolve_inactive_conversations_enabled: false,
+          auto_resolve_inactive_conversations_minutes: 60,
+          auto_resolve_inactive_conversations_message: 'Finalizando'
+        }
+      )
+      conversation.inbox.update!(
+        auto_resolve_inactive_conversations_enabled: true,
+        auto_resolve_inactive_conversations_minutes: 30
+      )
+      create(
+        :message,
+        account: account,
+        inbox: conversation.inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        sender: agent,
+        created_at: 31.minutes.ago
+      )
+
+      described_class.new(account: account).perform
+
+      expect(conversation.reload).to be_resolved
     end
 
     it 'does not send duplicate auto resolve messages' do

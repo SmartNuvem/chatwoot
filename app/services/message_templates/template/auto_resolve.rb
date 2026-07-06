@@ -2,7 +2,8 @@ class MessageTemplates::Template::AutoResolve
   pattr_initialize [:conversation!]
 
   def perform
-    return if conversation.account.auto_resolve_message.blank?
+    return unless conversation.inbox.resolved_message_enabled?
+    return if auto_resolve_message_text.blank?
 
     if within_messaging_window?
       conversation.messages.create!(auto_resolve_message_params)
@@ -36,7 +37,11 @@ class MessageTemplates::Template::AutoResolve
       account_id: @conversation.account_id,
       inbox_id: @conversation.inbox_id,
       message_type: :template,
-      content: account.auto_resolve_message
+      content: auto_resolve_message_text
     }
+  end
+
+  def auto_resolve_message_text
+    conversation.inbox[:resolved_message_text].presence || account.auto_resolve_message
   end
 end

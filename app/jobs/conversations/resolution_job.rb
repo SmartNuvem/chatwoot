@@ -5,15 +5,21 @@ class Conversations::ResolutionJob < ApplicationJob
     # limiting the number of conversations to be resolved to avoid any performance issues
     resolvable_conversations = conversation_scope(account).limit(Limits::BULK_ACTIONS_LIMIT)
     resolvable_conversations.each do |conversation|
-      # send message from bot that conversation has been resolved
-      # do this is account.auto_resolve_message is set
-      ::MessageTemplates::Template::AutoResolve.new(conversation: conversation).perform if account.auto_resolve_message.present?
+      send_auto_resolve_message(conversation, account)
       conversation.add_labels(account.auto_resolve_label) if account.auto_resolve_label.present?
       conversation.toggle_status
     end
   end
 
   private
+
+  def send_auto_resolve_message(conversation, account)
+    return unless conversation.inbox.resolved_message_enabled?
+    return unless conversation.inbox[:resolved_message_text].present? || account.auto_resolve_message.present?
+
+    ::MessageTemplates::Template::AutoResolve.new(conversation: conversation).perform
+    conversation.skip_resolved_message = true
+  end
 
   def conversation_scope(account)
     base_scope = if account.auto_resolve_ignore_waiting

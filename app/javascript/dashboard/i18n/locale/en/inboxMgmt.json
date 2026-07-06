@@ -805,6 +805,11 @@
       "FORWARD_EMAIL_NOT_CONFIGURED": "Forwarding emails to your inbox is currently disabled on this installation. To use this feature, it must be enabled by your administrator. Please get in touch with them to proceed.",
       "ALLOW_MESSAGES_AFTER_RESOLVED": "Allow messages after conversation resolved",
       "ALLOW_MESSAGES_AFTER_RESOLVED_SUB_TEXT": "Allow the end-users to send messages even after the conversation is resolved.",
+      "RESOLVED_MESSAGE": {
+        "TITLE": "Send message when resolving",
+        "DESCRIPTION": "Send a closing message when conversations from this inbox are resolved. If this inbox message is blank, the account message is used.",
+        "PLACEHOLDER": "Use the account default message or write a custom message for this inbox"
+      },
       "WHATSAPP_SECTION_SUBHEADER": "This API Key is used for the integration with the WhatsApp APIs.",
       "WHATSAPP_SECTION_UPDATE_SUBHEADER": "Enter the new API key to be used for the integration with the WhatsApp APIs.",
       "WHATSAPP_SECTION_TITLE": "API Key",
@@ -836,7 +841,12 @@
         "LABEL": "Enable voice calling",
         "DESCRIPTION": "Allow agents to start and receive WhatsApp voice calls on this inbox. Available only on embedded-signup WhatsApp Cloud channels with calling permission granted by Meta."
       },
-      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Update Pre Chat Form Settings"
+      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Update Pre Chat Form Settings",
+      "AUTO_RESOLVE_INACTIVE_CONVERSATIONS": {
+        "TITLE": "Auto-resolve conversations without interaction",
+        "DESCRIPTION": "Resolve conversations from this inbox after the customer stops replying for the configured time. Existing agent-reply rules still apply.",
+        "MINUTES_LABEL": "Time without interaction in minutes"
+      }
     },
     "HELP_CENTER": {
       "LABEL": "Help Center",

@@ -52,6 +52,8 @@ class Inbox < ApplicationRecord
   validates :timezone, inclusion: { in: TZInfo::Timezone.all_identifiers }
   validates :out_of_office_message, length: { maximum: Limits::OUT_OF_OFFICE_MESSAGE_MAX_LENGTH }
   validates :greeting_message, length: { maximum: Limits::GREETING_MESSAGE_MAX_LENGTH }
+  validates :resolved_message_text, length: { maximum: 150_000 }
+  validates :auto_resolve_inactive_conversations_minutes, numericality: { greater_than_or_equal_to: 1, only_integer: true, allow_nil: true }
   validate :ensure_valid_max_assignment_limit
 
   belongs_to :account
@@ -206,6 +208,28 @@ class Inbox < ApplicationRecord
 
   def auto_assignment_v2_enabled?
     account.feature_enabled?('assignment_v2')
+  end
+
+  def resolved_message_enabled?
+    return account.resolved_message_enabled? if resolved_message_enabled.nil?
+
+    ActiveModel::Type::Boolean.new.cast(resolved_message_enabled)
+  end
+
+  def resolved_message_text
+    self[:resolved_message_text].presence || account.resolved_message_text
+  end
+
+  def auto_resolve_inactive_conversations_enabled?
+    return account.auto_resolve_inactive_conversations_enabled? if self[:auto_resolve_inactive_conversations_enabled].nil?
+
+    ActiveModel::Type::Boolean.new.cast(self[:auto_resolve_inactive_conversations_enabled])
+  end
+
+  def auto_resolve_inactive_conversations_minutes
+    return account.auto_resolve_inactive_conversations_minutes if self[:auto_resolve_inactive_conversations_minutes].nil?
+
+    self[:auto_resolve_inactive_conversations_minutes]
   end
 
   # Callers (Reauthorizable) only invoke this on a real transition, so the previous

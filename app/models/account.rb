@@ -124,7 +124,11 @@ class Account < ApplicationRecord
   enum :status, { active: 0, suspended: 1 }
 
   scope :with_auto_resolve, -> { where("(settings ->> 'auto_resolve_after')::int IS NOT NULL") }
-  scope :with_inactive_conversation_auto_resolve, -> { where("(settings ->> 'auto_resolve_inactive_conversations_enabled') = 'true'") }
+  scope :with_inactive_conversation_auto_resolve, lambda {
+    left_joins(:inboxes)
+      .where("(settings ->> 'auto_resolve_inactive_conversations_enabled') = 'true' OR inboxes.auto_resolve_inactive_conversations_enabled = TRUE")
+      .distinct
+  }
 
   before_validation :validate_limit_keys
   before_validation :normalize_conversation_visibility_mode

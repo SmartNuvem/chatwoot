@@ -831,7 +831,17 @@
         "LABEL": "Ativar chamadas de voz",
         "DESCRIPTION": "Permita que os atendentes iniciem e recebam chamadas de voz do WhatsApp nesta caixa de entrada. Disponível apenas para canais do WhatsApp Cloud com cadastro incorporado e permissão de chamadas concedida pela Meta."
       },
-      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Atualizar configurações do Formulário Pre Chat"
+      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Atualizar configurações do Formulário Pre Chat",
+      "RESOLVED_MESSAGE": {
+        "TITLE": "Enviar mensagem ao resolver",
+        "DESCRIPTION": "Envia uma mensagem de encerramento quando conversas desta caixa de entrada forem resolvidas. Se a mensagem da caixa estiver vazia, a mensagem global da conta sera usada.",
+        "PLACEHOLDER": "Use a mensagem global da conta ou escreva uma mensagem propria para esta caixa"
+      },
+      "AUTO_RESOLVE_INACTIVE_CONVERSATIONS": {
+        "TITLE": "Resolver automaticamente conversas sem interação",
+        "DESCRIPTION": "Resolve conversas desta caixa de entrada quando o cliente ficar sem responder pelo tempo configurado. A regra de resposta do agente continua valendo.",
+        "MINUTES_LABEL": "Tempo sem interação em minutos"
+      }
     },
     "HELP_CENTER": {
       "LABEL": "Centro de Ajuda",

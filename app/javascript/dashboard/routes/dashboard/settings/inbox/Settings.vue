@@ -92,6 +92,10 @@ export default {
       businessName: '',
       locktoSingleConversation: false,
       allowMessagesAfterResolved: true,
+      resolvedMessageEnabled: false,
+      resolvedMessageText: '',
+      autoResolveInactiveConversationsEnabled: false,
+      autoResolveInactiveConversationsMinutes: 60,
       continuityViaEmail: true,
       selectedInboxName: '',
       channelWebsiteUrl: '',
@@ -470,6 +474,23 @@ export default {
       this.businessName = this.inbox.business_name;
       this.allowMessagesAfterResolved =
         this.inbox.allow_messages_after_resolved;
+      this.resolvedMessageEnabled =
+        this.inbox.resolved_message_enabled ??
+        this.inbox.effective_resolved_message_enabled ??
+        false;
+      this.resolvedMessageText =
+        this.inbox.resolved_message_text ||
+        this.inbox.effective_resolved_message_text ||
+        '';
+      this.autoResolveInactiveConversationsEnabled =
+        this.inbox.auto_resolve_inactive_conversations_enabled ??
+        this.inbox.effective_auto_resolve_inactive_conversations_enabled ??
+        false;
+      this.autoResolveInactiveConversationsMinutes = Number(
+        this.inbox.auto_resolve_inactive_conversations_minutes ||
+          this.inbox.effective_auto_resolve_inactive_conversations_minutes ||
+          60
+      );
       this.continuityViaEmail = this.inbox.continuity_via_email;
       this.channelWebsiteUrl = this.inbox.website_url;
       this.channelWelcomeTitle = this.inbox.welcome_title;
@@ -583,6 +604,13 @@ export default {
           name: this.selectedInboxName?.trim(),
           enable_email_collect: this.emailCollectEnabled,
           allow_messages_after_resolved: this.allowMessagesAfterResolved,
+          resolved_message_enabled: this.resolvedMessageEnabled,
+          resolved_message_text: this.resolvedMessageText || '',
+          auto_resolve_inactive_conversations_enabled:
+            this.autoResolveInactiveConversationsEnabled,
+          auto_resolve_inactive_conversations_minutes: Number(
+            this.autoResolveInactiveConversationsMinutes
+          ),
           greeting_enabled: this.greetingEnabled,
           greeting_message: this.greetingMessage || '',
           portal_id: this.selectedPortalSlug
@@ -1205,6 +1233,60 @@ export default {
                   )
                 "
               />
+
+              <SettingsToggleSection
+                v-model="resolvedMessageEnabled"
+                :header="$t('INBOX_MGMT.SETTINGS_POPUP.RESOLVED_MESSAGE.TITLE')"
+                :description="
+                  $t('INBOX_MGMT.SETTINGS_POPUP.RESOLVED_MESSAGE.DESCRIPTION')
+                "
+              >
+                <template #editor>
+                  <textarea
+                    v-model="resolvedMessageText"
+                    class="w-full min-h-[160px] text-sm"
+                    :placeholder="
+                      $t(
+                        'INBOX_MGMT.SETTINGS_POPUP.RESOLVED_MESSAGE.PLACEHOLDER'
+                      )
+                    "
+                  />
+                </template>
+              </SettingsToggleSection>
+
+              <SettingsToggleSection
+                v-model="autoResolveInactiveConversationsEnabled"
+                :header="
+                  $t(
+                    'INBOX_MGMT.SETTINGS_POPUP.AUTO_RESOLVE_INACTIVE_CONVERSATIONS.TITLE'
+                  )
+                "
+                :description="
+                  $t(
+                    'INBOX_MGMT.SETTINGS_POPUP.AUTO_RESOLVE_INACTIVE_CONVERSATIONS.DESCRIPTION'
+                  )
+                "
+              >
+                <template #editor>
+                  <label
+                    class="block mb-1 text-sm font-medium text-n-slate-12"
+                    for="autoResolveInactiveConversationsMinutes"
+                  >
+                    {{
+                      $t(
+                        'INBOX_MGMT.SETTINGS_POPUP.AUTO_RESOLVE_INACTIVE_CONVERSATIONS.MINUTES_LABEL'
+                      )
+                    }}
+                  </label>
+                  <input
+                    id="autoResolveInactiveConversationsMinutes"
+                    v-model.number="autoResolveInactiveConversationsMinutes"
+                    type="number"
+                    min="1"
+                    class="w-full text-sm"
+                  />
+                </template>
+              </SettingsToggleSection>
 
               <SettingsToggleSection
                 v-if="isAWebWidgetInbox && showContinuityToggle"

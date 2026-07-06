@@ -831,7 +831,17 @@
         "LABEL": "Enable voice calling",
         "DESCRIPTION": "Allow agents to start and receive WhatsApp voice calls on this inbox. Available only on embedded-signup WhatsApp Cloud channels with calling permission granted by Meta."
       },
-      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Atualizar configurações do formulário pré-chat"
+      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Atualizar configurações do formulário pré-chat",
+      "RESOLVED_MESSAGE": {
+        "TITLE": "Enviar mensagem ao resolver",
+        "DESCRIPTION": "Envia uma mensagem de encerramento quando conversas desta caixa de entrada forem resolvidas. Se a mensagem da caixa estiver vazia, a mensagem global da conta sera usada.",
+        "PLACEHOLDER": "Use a mensagem global da conta ou escreva uma mensagem propria para esta caixa"
+      },
+      "AUTO_RESOLVE_INACTIVE_CONVERSATIONS": {
+        "TITLE": "Resolver automaticamente conversas sem interação",
+        "DESCRIPTION": "Resolve conversas desta caixa de entrada quando o cliente ficar sem responder pelo tempo configurado. A regra de resposta do agente continua valendo.",
+        "MINUTES_LABEL": "Tempo sem interação em minutos"
+      }
     },
     "HELP_CENTER": {
       "LABEL": "Centro de suporte",
