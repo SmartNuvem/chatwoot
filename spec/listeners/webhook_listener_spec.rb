@@ -35,6 +35,18 @@ describe WebhookListener do
         listener.message_created(message_created_event)
       end
 
+      it 'triggers inbox webhooks for incoming messages when working hours are disabled' do
+        incoming_message = create(:message, message_type: 'incoming', account: account, inbox: inbox, conversation: conversation)
+        incoming_event = Events::Base.new(event_name, Time.zone.now, message: incoming_message)
+        webhook = create(:webhook, inbox: inbox, account: account)
+
+        expect(WebhookJob).to receive(:perform_later).with(
+          webhook.url, incoming_message.webhook_data.merge(event: 'message_created'), :account_webhook,
+          secret: webhook.secret, delivery_id: instance_of(String)
+        ).once
+        listener.message_created(incoming_event)
+      end
+
       it 'only triggers webhooks matching the event inbox and global webhooks' do
         loja_1 = create(:inbox, account: account, name: 'Loja 1')
         loja_2 = create(:inbox, account: account, name: 'Loja 2')
@@ -75,6 +87,28 @@ describe WebhookListener do
           secret: loja_1_webhook.secret, delivery_id: instance_of(String)
         )
         listener.message_created(loja_2_event)
+      end
+
+      it 'does not trigger inbox webhooks for incoming messages outside inbox working hours' do
+        inbox.update!(working_hours_enabled: true)
+        inbox.working_hours.find_by(day_of_week: Time.zone.now.in_time_zone(inbox.timezone).to_date.wday).update!(
+          closed_all_day: true,
+          open_all_day: false
+        )
+        incoming_message = create(:message, message_type: 'incoming', account: account, inbox: inbox, conversation: conversation)
+        incoming_event = Events::Base.new(event_name, Time.zone.now, message: incoming_message)
+        inbox_webhook = create(:webhook, account: account, inbox: inbox, url: 'https://inbox.example.com')
+        global_webhook = create(:webhook, account: account, url: 'https://global.example.com')
+
+        expect(WebhookJob).to receive(:perform_later).with(
+          global_webhook.url, incoming_message.webhook_data.merge(event: 'message_created'), :account_webhook,
+          secret: global_webhook.secret, delivery_id: instance_of(String)
+        ).once
+        expect(WebhookJob).not_to receive(:perform_later).with(
+          inbox_webhook.url, incoming_message.webhook_data.merge(event: 'message_created'), :account_webhook,
+          secret: inbox_webhook.secret, delivery_id: instance_of(String)
+        )
+        listener.message_created(incoming_event)
       end
     end
 

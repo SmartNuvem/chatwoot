@@ -29,7 +29,7 @@ class WebhookListener < BaseListener
     return unless message.webhook_sendable?
 
     payload = message.webhook_data.merge(event: __method__.to_s)
-    deliver_webhook_payloads(payload, inbox)
+    deliver_webhook_payloads(payload, inbox, message)
   end
 
   def message_updated(event)
@@ -107,12 +107,15 @@ class WebhookListener < BaseListener
     deliver_webhook_payloads(payload, inbox)
   end
 
-  def deliver_account_webhooks(payload, account, inbox = nil)
+  def deliver_account_webhooks(payload, account, inbox = nil, message = nil)
+    skip_inbox_webhooks_out_of_office = skip_inbox_webhooks_out_of_office?(payload, inbox, message)
+
     account.webhooks.account_type.includes(:inboxes).each do |webhook|
       webhook_inbox_ids = webhook.inboxes.map(&:id)
 
       next unless webhook.subscriptions.include?(payload[:event])
       next if webhook_inbox_ids.present? && (inbox.blank? || webhook_inbox_ids.exclude?(inbox.id))
+      next if skip_inbox_webhooks_out_of_office && webhook_inbox_ids.include?(inbox.id)
 
       WebhookJob.perform_later(webhook.url, payload, :account_webhook,
                                secret: webhook.secret,
@@ -128,8 +131,16 @@ class WebhookListener < BaseListener
                              secret: inbox.channel.secret, delivery_id: SecureRandom.uuid)
   end
 
-  def deliver_webhook_payloads(payload, inbox)
-    deliver_account_webhooks(payload, inbox.account, inbox)
+  def deliver_webhook_payloads(payload, inbox, message = nil)
+    deliver_account_webhooks(payload, inbox.account, inbox, message)
     deliver_api_inbox_webhooks(payload, inbox)
+  end
+
+  def skip_inbox_webhooks_out_of_office?(payload, inbox, message)
+    return false unless payload[:event] == 'message_created'
+    return false unless message&.incoming?
+    return false if inbox.blank?
+
+    inbox.out_of_office?
   end
 end
