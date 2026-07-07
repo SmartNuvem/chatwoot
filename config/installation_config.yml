@@ -84,6 +84,30 @@
   display_title: 'Webhook request timeout (seconds)'
   description: 'Maximum time Chatwoot waits for a webhook response before failing the request'
   locked: false
+- name: AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_ENABLED
+  value: false
+  display_title: 'Auto assign unassigned team conversations'
+  description: 'Periodically retry assigning open team conversations that do not have an assigned agent'
+  locked: false
+  type: boolean
+- name: AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_INTERVAL_MINUTES
+  value: 15
+  display_title: 'Auto assign unassigned team conversations interval'
+  description: 'Minimum interval in minutes between retries for unassigned team conversations'
+  locked: false
+  type: number
+- name: AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_ONLINE_ONLY
+  value: true
+  display_title: 'Only assign unassigned team conversations to online agents'
+  description: 'When enabled, retry assignment only considers online agents in the current team'
+  locked: false
+  type: boolean
+- name: AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_BATCH_LIMIT
+  value: 100
+  display_title: 'Auto assign unassigned team conversations batch limit'
+  description: 'Maximum number of unassigned team conversations processed per job run'
+  locked: false
+  type: number
 - name: DIRECT_UPLOADS_ENABLED
   type: boolean
   value: false

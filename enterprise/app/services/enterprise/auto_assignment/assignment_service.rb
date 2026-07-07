@@ -15,7 +15,7 @@ module Enterprise::AutoAssignment::AssignmentService
 
   # Extend agent finding to add capacity checks
   def find_available_agent(conversation = nil)
-    agents = filter_agents_by_team(inbox.available_agents, conversation)
+    agents = filter_agents_by_team(agent_candidates, conversation)
     return nil if agents.nil?
 
     agents = filter_agents_by_rate_limit(agents)

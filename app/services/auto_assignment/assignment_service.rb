@@ -1,6 +1,8 @@
 class AutoAssignment::AssignmentService
   pattr_initialize [:inbox!]
 
+  attr_writer :require_online_agents
+
   def perform_bulk_assignment(limit: 100)
     return 0 unless inbox.auto_assignment_v2_enabled?
     return 0 unless inbox.enable_auto_assignment?
@@ -14,6 +16,23 @@ class AutoAssignment::AssignmentService
       assigned_count += 1 if perform_for_conversation(conversation)
     end
     assigned_count
+  end
+
+  def perform_for_unassigned_team_conversation(conversation, require_online_agents: true)
+    self.require_online_agents = require_online_agents
+    conversation.reload
+
+    return :not_assignable unless inbox.auto_assignment_v2_enabled?
+    return :not_assignable unless inbox.enable_auto_assignment?
+    return :already_assigned if conversation.assignee_id.present?
+    return :not_assignable unless assignable_team_conversation?(conversation)
+
+    agent = find_available_agent(conversation)
+    return :no_agent_available unless agent
+
+    assign_conversation(conversation, agent) ? :assigned : :not_assignable
+  ensure
+    self.require_online_agents = nil
   end
 
   private
@@ -60,13 +79,23 @@ class AutoAssignment::AssignmentService
   end
 
   def find_available_agent(conversation = nil)
-    agents = filter_agents_by_team(inbox.available_agents, conversation)
+    agents = filter_agents_by_team(agent_candidates, conversation)
     return nil if agents.nil?
 
     agents = filter_agents_by_rate_limit(agents)
     return nil if agents.empty?
 
     round_robin_selector.select_agent(agents)
+  end
+
+  def agent_candidates
+    return inbox.available_agents if require_online_agents?
+
+    inbox.inbox_members.joins(:user).includes(:user)
+  end
+
+  def require_online_agents?
+    @require_online_agents.nil? ? true : @require_online_agents
   end
 
   def filter_agents_by_team(agents, conversation)
@@ -104,10 +133,10 @@ class AutoAssignment::AssignmentService
     Current.executed_by = inbox.assignment_policy || inbox
 
     Conversation.transaction do
-      locked = inbox.conversations
-                    .where(id: conversation.id, assignee_id: nil)
-                    .lock('FOR UPDATE SKIP LOCKED')
-                    .first
+      conditions = { id: conversation.id, assignee_id: nil, status: Conversation.statuses[:open] }
+      conditions[:team_id] = conversation.team_id if conversation.team_id.present?
+
+      locked = inbox.conversations.where(conditions).lock('FOR UPDATE SKIP LOCKED').first
       next false unless locked
 
       locked.update!(assignee: agent)
@@ -132,6 +161,18 @@ class AutoAssignment::AssignmentService
 
   def round_robin_selector
     @round_robin_selector ||= AutoAssignment::RoundRobinSelector.new(inbox: inbox)
+  end
+
+  def assignable_team_conversation?(conversation)
+    conversation.inbox_id == inbox.id &&
+      conversation.status == 'open' &&
+      conversation.team_id.present? &&
+      conversation.assignee_id.nil? &&
+      active_conversation?(conversation)
+  end
+
+  def active_conversation?(conversation)
+    conversation.waiting_since.present? || conversation.messages.incoming.exists?
   end
 end
 
