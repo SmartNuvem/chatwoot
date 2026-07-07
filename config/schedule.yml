@@ -61,9 +61,9 @@ periodic_assignment_job:
   class: 'AutoAssignment::PeriodicAssignmentJob'
   queue: scheduled_jobs
 
-# executed every 5 minutes; the job enforces its configured interval internally
+# executed every minute; the job enforces each account's configured interval internally
 auto_assign_unassigned_team_conversations_job:
-  cron: '*/5 * * * *'
+  cron: '*/1 * * * *'
   class: 'AutoAssignUnassignedTeamConversationsJob'
   queue: scheduled_jobs
 
