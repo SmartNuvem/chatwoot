@@ -209,5 +209,27 @@ RSpec.describe Conversations::PermissionFilterService do
         expect(result).to contain_exactly(assigned_conversation)
       end
     end
+
+    context 'when assignee visibility mode is stored as a string alias' do
+      let(:commercial_agent) { create(:user, account: account, role: :agent) }
+      let(:finance_agent) { create(:user, account: account, role: :agent) }
+      let!(:assigned_to_commercial) { create(:conversation, account: account, inbox: inbox, assignee: commercial_agent) }
+      let!(:assigned_to_finance) { create(:conversation, account: account, inbox: inbox, assignee: finance_agent) }
+      let!(:unassigned_conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
+
+      before do
+        account.update!(settings: { conversation_visibility_mode: 'assignee_only' })
+        create(:inbox_member, user: commercial_agent, inbox: inbox)
+        create(:inbox_member, user: finance_agent, inbox: inbox)
+      end
+
+      it 'treats assignee_only as assignee visibility and only returns assigned conversations' do
+        result = described_class.new(account.conversations, commercial_agent, account).perform
+
+        expect(account.reload.conversation_visibility_mode).to eq(Account::CONVERSATION_VISIBILITY_MODES[:assignee])
+        expect(result).to contain_exactly(assigned_to_commercial)
+        expect(result).not_to include(assigned_to_finance, unassigned_conversation)
+      end
+    end
   end
 end

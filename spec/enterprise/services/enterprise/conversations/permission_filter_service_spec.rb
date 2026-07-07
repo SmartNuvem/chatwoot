@@ -85,6 +85,32 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
       end
     end
 
+    context 'when assignee visibility mode is enabled with a custom role' do
+      it 'does not let conversation_manage override assigned-only visibility' do
+        test_account = create(:account, settings: { conversation_visibility_mode: 'assignee_only' })
+        test_inbox = create(:inbox, account: test_account)
+        test_agent = create(:user, account: test_account, role: :agent)
+        other_agent = create(:user, account: test_account, role: :agent)
+        create(:inbox_member, user: test_agent, inbox: test_inbox)
+        create(:inbox_member, user: other_agent, inbox: test_inbox)
+
+        custom_role = create(:custom_role, account: test_account, permissions: ['conversation_manage'])
+        test_account.account_users.find_by(user: test_agent).update!(custom_role: custom_role)
+
+        assigned_to_agent = create(:conversation, account: test_account, inbox: test_inbox, assignee: test_agent)
+        create(:conversation, account: test_account, inbox: test_inbox, assignee: other_agent)
+        create(:conversation, account: test_account, inbox: test_inbox, assignee: nil)
+
+        result = Conversations::PermissionFilterService.new(
+          test_account.conversations,
+          test_agent,
+          test_account
+        ).perform
+
+        expect(result).to contain_exactly(assigned_to_agent)
+      end
+    end
+
     context 'when user has conversation_participating_manage permission' do
       it 'returns only conversations assigned to the agent' do
         # Create a new isolated test environment

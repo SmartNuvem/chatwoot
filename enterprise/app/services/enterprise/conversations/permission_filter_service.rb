@@ -1,5 +1,6 @@
 module Enterprise::Conversations::PermissionFilterService
   def perform
+    return super if account.conversation_visibility_mode == Account::CONVERSATION_VISIBILITY_MODES[:assignee]
     return filter_by_permissions(permissions) if user_has_custom_role?
 
     super

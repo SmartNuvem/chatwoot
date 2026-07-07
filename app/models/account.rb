@@ -41,6 +41,14 @@ class Account < ApplicationRecord
     team: 1,
     assignee: 2
   }.freeze
+  CONVERSATION_VISIBILITY_MODE_ALIASES = {
+    'default' => CONVERSATION_VISIBILITY_MODES[:default],
+    'all' => CONVERSATION_VISIBILITY_MODES[:default],
+    'team' => CONVERSATION_VISIBILITY_MODES[:team],
+    'team_only' => CONVERSATION_VISIBILITY_MODES[:team],
+    'assignee' => CONVERSATION_VISIBILITY_MODES[:assignee],
+    'assignee_only' => CONVERSATION_VISIBILITY_MODES[:assignee]
+  }.freeze
   DEFAULT_RESOLVED_MESSAGE_TEXT = "Agradecemos por entrar em contato conosco 😊\n\n" \
                                   "Permanecemos à disposição para qualquer necessidade futura.\n\n" \
                                   "Desejamos um excelente dia!\n\n" \
@@ -189,7 +197,8 @@ class Account < ApplicationRecord
 
   def conversation_visibility_mode
     raw_mode = settings&.fetch('conversation_visibility_mode', nil)
-    return raw_mode.to_i if raw_mode.present? || raw_mode == 0
+    normalized_mode = normalize_conversation_visibility_value(raw_mode)
+    return normalized_mode unless normalized_mode.nil?
 
     return CONVERSATION_VISIBILITY_MODES[:assignee] if settings_boolean('restrict_conversations_to_assignee')
     return CONVERSATION_VISIBILITY_MODES[:team] if settings_boolean('restrict_conversations_by_team')
@@ -199,7 +208,7 @@ class Account < ApplicationRecord
 
   def conversation_visibility_mode=(value)
     self.settings ||= {}
-    settings['conversation_visibility_mode'] = value.present? ? value.to_i : nil
+    settings['conversation_visibility_mode'] = normalize_conversation_visibility_value(value)
   end
 
   def clear_labels_on_resolved?
@@ -302,6 +311,15 @@ class Account < ApplicationRecord
     return unless settings.is_a?(Hash)
 
     settings['conversation_visibility_mode'] = conversation_visibility_mode
+  end
+
+  def normalize_conversation_visibility_value(value)
+    return nil if value.blank? && value != 0
+
+    return value if CONVERSATION_VISIBILITY_MODES.value?(value)
+    return value.to_i if value.is_a?(String) && value.match?(/\A\d+\z/) && CONVERSATION_VISIBILITY_MODES.value?(value.to_i)
+
+    CONVERSATION_VISIBILITY_MODE_ALIASES[value.to_s]
   end
 
   trigger.after(:insert).for_each(:row) do

@@ -150,7 +150,9 @@ class Conversations::UnreadCounts::Counter
 
   def permission_mode
     @permission_mode ||=
-      if !custom_role_agent? || permissions.include?(MANAGE_ALL_PERMISSION)
+      if assignee_visibility_mode? && !account_user&.administrator?
+        :mine
+      elsif !custom_role_agent? || permissions.include?(MANAGE_ALL_PERMISSION)
         :base
       elsif permissions.include?(UNASSIGNED_PERMISSION)
         :unassigned_and_mine
@@ -163,6 +165,10 @@ class Conversations::UnreadCounts::Counter
 
   def custom_role_agent?
     account_user&.agent? && account_user.custom_role_id.present?
+  end
+
+  def assignee_visibility_mode?
+    account.conversation_visibility_mode == Account::CONVERSATION_VISIBILITY_MODES[:assignee]
   end
 
   def permissions

@@ -232,6 +232,46 @@ describe ActionCableListener do
     end
   end
 
+  describe '#conversation_updated with assignee-only visibility' do
+    let(:event_name) { :'conversation.updated' }
+    let!(:other_agent) { create(:user, account: account, role: :agent) }
+    let!(:event) { Events::Base.new(event_name, Time.zone.now, conversation: conversation) }
+
+    before do
+      account.update!(settings: { conversation_visibility_mode: 'assignee_only' })
+      create(:inbox_member, inbox: inbox, user: other_agent)
+      conversation.update!(assignee: agent)
+    end
+
+    it 'does not broadcast conversation payloads to inbox agents who are not assigned' do
+      expect(ActionCableBroadcastJob).to receive(:perform_later).with(
+        a_collection_containing_exactly(agent.pubsub_token, admin.pubsub_token, conversation.contact_inbox.pubsub_token),
+        'conversation.updated',
+        conversation.push_event_data.merge(account_id: account.id)
+      )
+
+      listener.conversation_updated(event)
+    end
+  end
+
+  describe '#conversation_mentioned with assignee-only visibility' do
+    let(:event_name) { :'conversation.mentioned' }
+    let!(:other_agent) { create(:user, account: account, role: :agent) }
+    let!(:event) { Events::Base.new(event_name, Time.zone.now, conversation: conversation, user: other_agent) }
+
+    before do
+      account.update!(settings: { conversation_visibility_mode: 'assignee_only' })
+      create(:inbox_member, inbox: inbox, user: other_agent)
+      conversation.update!(assignee: agent)
+    end
+
+    it 'does not broadcast mentioned conversation payloads to agents who are not assigned' do
+      expect(ActionCableBroadcastJob).not_to receive(:perform_later)
+
+      listener.conversation_mentioned(event)
+    end
+  end
+
   describe '#conversation_unread_count_changed' do
     let(:event_name) { :'conversation.unread_count_changed' }
     let!(:agent_without_inbox_access) { create(:user, account: account, role: :agent) }

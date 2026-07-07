@@ -69,6 +69,33 @@ RSpec.describe Conversations::UnreadCounts::Counter do
     )
   end
 
+  it 'counts only conversations assigned to the agent when assignee visibility is enabled' do
+    account.update!(settings: { conversation_visibility_mode: 'assignee_only' })
+    create_unread_conversation(account: account, inbox: visible_inbox, labels: [label.title], assignee: agent, team: visible_team)
+    create_unread_conversation(account: account, inbox: visible_inbox, labels: [label.title], assignee: admin, team: visible_team)
+    create_unread_conversation(account: account, inbox: visible_inbox, labels: [label.title], assignee: nil, team: visible_team)
+
+    result = described_class.new(account: account, user: agent).perform
+
+    expect(result).to eq(
+      all_count: 1,
+      inboxes: { visible_inbox.id.to_s => 1 },
+      labels: { label.id.to_s => 1 },
+      teams: { visible_team.id.to_s => 1 }
+    )
+  end
+
+  it 'keeps all unread conversations visible for admins when assignee visibility is enabled' do
+    account.update!(settings: { conversation_visibility_mode: 'assignee_only' })
+    create_unread_conversation(account: account, inbox: visible_inbox, labels: [label.title], assignee: agent, team: visible_team)
+    create_unread_conversation(account: account, inbox: visible_inbox, labels: [label.title], assignee: nil, team: visible_team)
+
+    result = described_class.new(account: account, user: admin).perform
+
+    expect(result[:all_count]).to eq(2)
+    expect(result[:inboxes]).to eq(visible_inbox.id.to_s => 2)
+  end
+
   it 'counts unread conversations across all account inboxes for admins' do
     create_unread_conversation(account: account, inbox: visible_inbox, labels: [label.title], team: visible_team)
     create_unread_conversation(account: account, inbox: hidden_inbox, labels: [label.title], team: visible_team)

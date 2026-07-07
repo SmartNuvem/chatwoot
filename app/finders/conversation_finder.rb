@@ -220,11 +220,52 @@ class ConversationFinder
     sort_by, sort_order = SORT_OPTIONS[params[:sort_by]] || SORT_OPTIONS['last_activity_at_desc']
     @conversations = @conversations.send(sort_by, sort_order)
 
-    if params[:updated_within].present?
+    @conversations = if params[:updated_within].present?
       @conversations.where('conversations.updated_at > ?', Time.zone.now - params[:updated_within].to_i.seconds)
     else
       @conversations.page(current_page).per(ENV.fetch('CONVERSATION_RESULTS_PER_PAGE', '25').to_i)
     end
+
+    log_visibility_debug(@conversations)
+    @conversations
+  end
+
+  def log_visibility_debug(conversation_scope)
+    return unless Rails.logger.debug?
+
+    records = conversation_scope.to_a
+    Rails.logger.debug(
+      {
+        event: 'conversation_visibility.list',
+        current_user_id: current_user.id,
+        current_user_role: current_account.account_users.find_by(user_id: current_user.id)&.role,
+        account_id: current_account.id,
+        conversation_visibility_mode: current_account.conversation_visibility_mode,
+        assignee_type: @assignee_type || 'all',
+        returned_conversations: records.map { |conversation| visibility_debug_payload(conversation) }
+      }.to_json
+    )
+  end
+
+  def visibility_debug_payload(conversation)
+    {
+      id: conversation.id,
+      display_id: conversation.display_id,
+      assignee_id: conversation.assignee_id,
+      team_id: conversation.team_id,
+      allowed_reason: visibility_allowed_reason(conversation)
+    }
+  end
+
+  def visibility_allowed_reason(conversation)
+    return 'administrator' if @is_admin
+    return 'assigned_to_current_user' if conversation.assignee_id == current_user.id
+    return 'team_visibility' if current_account.conversation_visibility_mode == Account::CONVERSATION_VISIBILITY_MODES[:team] &&
+                                conversation.team_id.present? &&
+                                current_user.teams.where(account_id: current_account.id).exists?(id: conversation.team_id)
+    return 'default_inbox_access' if current_account.conversation_visibility_mode == Account::CONVERSATION_VISIBILITY_MODES[:default]
+
+    'permission_filter'
   end
 end
 ConversationFinder.prepend_mod_with('ConversationFinder')

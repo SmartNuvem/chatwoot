@@ -71,6 +71,99 @@ RSpec.describe 'Conversations API', type: :request do
     end
   end
 
+  describe 'assignee-only conversation visibility' do
+    let(:commercial_agent) { create(:user, account: account, role: :agent) }
+    let(:finance_agent) { create(:user, account: account, role: :agent) }
+    let(:administrator) { create(:user, account: account, role: :administrator) }
+    let(:inbox) { create(:inbox, account: account) }
+    let!(:commercial_conversation) { create(:conversation, account: account, inbox: inbox, assignee: commercial_agent) }
+    let!(:finance_conversation) { create(:conversation, account: account, inbox: inbox, assignee: finance_agent) }
+    let!(:unassigned_conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
+
+    before do
+      account.update!(settings: { conversation_visibility_mode: 'assignee_only' })
+      create(:inbox_member, user: commercial_agent, inbox: inbox)
+      create(:inbox_member, user: finance_agent, inbox: inbox)
+      create(:message, conversation: commercial_conversation, account: account, inbox: inbox, content: 'commercial visible')
+      create(:message, conversation: finance_conversation, account: account, inbox: inbox, content: 'finance hidden')
+      create(:message, conversation: unassigned_conversation, account: account, inbox: inbox, content: 'unassigned hidden')
+    end
+
+    it 'only returns conversations assigned to the current agent in the all filter' do
+      get "/api/v1/accounts/#{account.id}/conversations",
+          headers: commercial_agent.create_new_auth_token,
+          params: { assignee_type: 'all', status: 'all' },
+          as: :json
+
+      expect(response).to have_http_status(:success)
+      payload = response.parsed_body.dig('data', 'payload')
+      expect(payload.pluck('id')).to contain_exactly(commercial_conversation.display_id)
+      expect(response.parsed_body.dig('data', 'meta')).to include(
+        'all_count' => 1,
+        'mine_count' => 1,
+        'assigned_count' => 1,
+        'unassigned_count' => 0
+      )
+    end
+
+    it 'does not return unassigned conversations to regular agents' do
+      get "/api/v1/accounts/#{account.id}/conversations",
+          headers: commercial_agent.create_new_auth_token,
+          params: { assignee_type: 'unassigned', status: 'all' },
+          as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.dig('data', 'payload')).to be_empty
+    end
+
+    it 'does not return another agent conversation in conversation search' do
+      get "/api/v1/accounts/#{account.id}/conversations/search",
+          headers: commercial_agent.create_new_auth_token,
+          params: { q: 'finance hidden', status: 'all' },
+          as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body['payload']).to be_empty
+    end
+
+    it 'does not return another agent conversation in advanced filters' do
+      post "/api/v1/accounts/#{account.id}/conversations/filter",
+           headers: commercial_agent.create_new_auth_token,
+           params: {
+             payload: [{
+               attribute_key: 'status',
+               filter_operator: 'equal_to',
+               values: ['open']
+             }]
+           },
+           as: :json
+
+      expect(response).to have_http_status(:success)
+      payload = response.parsed_body['payload'] || response.parsed_body.dig('data', 'payload')
+      expect(payload.pluck('id')).to contain_exactly(commercial_conversation.display_id)
+    end
+
+    it 'blocks direct URL access to a conversation assigned to another agent' do
+      get "/api/v1/accounts/#{account.id}/conversations/#{finance_conversation.display_id}",
+          headers: commercial_agent.create_new_auth_token,
+          as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'allows the assigned agent and administrator to open the conversation' do
+      get "/api/v1/accounts/#{account.id}/conversations/#{finance_conversation.display_id}",
+          headers: finance_agent.create_new_auth_token,
+          as: :json
+      expect(response).to have_http_status(:success)
+
+      get "/api/v1/accounts/#{account.id}/conversations/#{finance_conversation.display_id}",
+          headers: administrator.create_new_auth_token,
+          as: :json
+      expect(response).to have_http_status(:success)
+    end
+  end
+
   describe 'GET /api/v1/accounts/{account.id}/conversations/meta' do
     context 'when it is an unauthenticated user' do
       it 'returns unauthorized' do
