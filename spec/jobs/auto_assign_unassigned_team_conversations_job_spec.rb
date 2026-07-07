@@ -87,6 +87,17 @@ RSpec.describe AutoAssignUnassignedTeamConversationsJob, type: :job do
       expect(second.reload.assignee).to be_nil
     end
 
+    it 'assigns even when inbox auto assignment is disabled' do
+      enable_job
+      inbox.update!(enable_auto_assignment: false)
+      conversation = create(:conversation, account: account, inbox: inbox, team: team, assignee: nil)
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming)
+
+      described_class.new.perform
+
+      expect(conversation.reload.assignee).to eq(agent)
+    end
+
     it 'skips when disabled' do
       conversation = create(:conversation, account: account, inbox: inbox, team: team, assignee: nil)
       create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming)

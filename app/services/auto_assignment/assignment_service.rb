@@ -23,7 +23,6 @@ class AutoAssignment::AssignmentService
     conversation.reload
 
     return :not_assignable unless inbox.auto_assignment_v2_enabled?
-    return :not_assignable unless inbox.enable_auto_assignment?
     return :already_assigned if conversation.assignee_id.present?
     return :not_assignable unless assignable_team_conversation?(conversation)
 
