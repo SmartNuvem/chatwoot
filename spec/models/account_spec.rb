@@ -59,6 +59,30 @@ RSpec.describe Account do
     end
   end
 
+  describe '#auto_assign_unassigned_team_conversations_enabled?' do
+    it 'defaults to false' do
+      expect(described_class.new.auto_assign_unassigned_team_conversations_enabled?).to be false
+    end
+  end
+
+  describe '#auto_assign_unassigned_team_conversations_interval_minutes' do
+    it 'defaults to 15' do
+      expect(described_class.new.auto_assign_unassigned_team_conversations_interval_minutes).to eq(15)
+    end
+  end
+
+  describe '#auto_assign_unassigned_team_conversations_online_only?' do
+    it 'defaults to true' do
+      expect(described_class.new.auto_assign_unassigned_team_conversations_online_only?).to be true
+    end
+  end
+
+  describe '#auto_assign_unassigned_team_conversations_batch_limit' do
+    it 'defaults to 100' do
+      expect(described_class.new.auto_assign_unassigned_team_conversations_batch_limit).to eq(100)
+    end
+  end
+
   it { is_expected.to have_many(:users).through(:account_users) }
   it { is_expected.to have_many(:account_users) }
   it { is_expected.to have_many(:inboxes).dependent(:destroy_async) }

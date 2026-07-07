@@ -9,7 +9,7 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import WithLabel from 'v3/components/Form/WithLabel.vue';
 import NextInput from 'next/input/Input.vue';
-import Switch from 'next/switch/Switch.vue';
+import NextSwitch from 'next/switch/Switch.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import AccountId from './components/AccountId.vue';
@@ -49,7 +49,7 @@ export default {
     SectionLayout,
     WithLabel,
     NextInput,
-    Switch,
+    NextSwitch,
   },
   setup() {
     const { updateUISettings, uiSettings } = useUISettings();
@@ -74,6 +74,10 @@ export default {
       autoResolveInactiveConversationsMinutes: 60,
       autoResolveInactiveConversationsMessage:
         DEFAULT_AUTO_RESOLVE_INACTIVE_CONVERSATIONS_MESSAGE,
+      autoAssignUnassignedTeamConversationsEnabled: false,
+      autoAssignUnassignedTeamConversationsIntervalMinutes: 15,
+      autoAssignUnassignedTeamConversationsOnlineOnly: true,
+      autoAssignUnassignedTeamConversationsBatchLimit: 100,
       features: {},
     };
   },
@@ -191,11 +195,24 @@ export default {
           settings?.resolved_message_text || DEFAULT_RESOLVED_MESSAGE_TEXT;
         this.autoResolveInactiveConversationsEnabled =
           !!settings?.auto_resolve_inactive_conversations_enabled;
-        this.autoResolveInactiveConversationsMinutes =
-          Number(settings?.auto_resolve_inactive_conversations_minutes || 60);
+        this.autoResolveInactiveConversationsMinutes = Number(
+          settings?.auto_resolve_inactive_conversations_minutes || 60
+        );
         this.autoResolveInactiveConversationsMessage =
           settings?.auto_resolve_inactive_conversations_message ||
           DEFAULT_AUTO_RESOLVE_INACTIVE_CONVERSATIONS_MESSAGE;
+        this.autoAssignUnassignedTeamConversationsEnabled =
+          !!settings?.auto_assign_unassigned_team_conversations_enabled;
+        this.autoAssignUnassignedTeamConversationsIntervalMinutes = Number(
+          settings?.auto_assign_unassigned_team_conversations_interval_minutes ||
+            15
+        );
+        this.autoAssignUnassignedTeamConversationsOnlineOnly =
+          settings?.auto_assign_unassigned_team_conversations_online_only ??
+          true;
+        this.autoAssignUnassignedTeamConversationsBatchLimit = Number(
+          settings?.auto_assign_unassigned_team_conversations_batch_limit || 100
+        );
         this.features = features;
       } catch (error) {
         // Ignore error
@@ -220,10 +237,21 @@ export default {
           resolved_message_text: this.resolvedMessageText,
           auto_resolve_inactive_conversations_enabled:
             this.autoResolveInactiveConversationsEnabled,
-          auto_resolve_inactive_conversations_minutes:
-            Number(this.autoResolveInactiveConversationsMinutes),
+          auto_resolve_inactive_conversations_minutes: Number(
+            this.autoResolveInactiveConversationsMinutes
+          ),
           auto_resolve_inactive_conversations_message:
             this.autoResolveInactiveConversationsMessage,
+          auto_assign_unassigned_team_conversations_enabled:
+            this.autoAssignUnassignedTeamConversationsEnabled,
+          auto_assign_unassigned_team_conversations_interval_minutes: Number(
+            this.autoAssignUnassignedTeamConversationsIntervalMinutes
+          ),
+          auto_assign_unassigned_team_conversations_online_only:
+            this.autoAssignUnassignedTeamConversationsOnlineOnly,
+          auto_assign_unassigned_team_conversations_batch_limit: Number(
+            this.autoAssignUnassignedTeamConversationsBatchLimit
+          ),
         });
         // If user locale is set, update the locale with user locale
         const updatedLocale = this.uiSettings?.locale || this.locale;
@@ -280,9 +308,7 @@ export default {
           resolved_message_text: this.resolvedMessageText,
           options: { silent: true },
         });
-        useAlert(
-          this.$t('GENERAL_SETTINGS.FORM.RESOLVED_MESSAGE.API.SUCCESS')
-        );
+        useAlert(this.$t('GENERAL_SETTINGS.FORM.RESOLVED_MESSAGE.API.SUCCESS'));
       } catch (error) {
         useAlert(this.$t('GENERAL_SETTINGS.FORM.RESOLVED_MESSAGE.API.ERROR'));
       }
@@ -293,8 +319,9 @@ export default {
         await this.$store.dispatch('accounts/update', {
           auto_resolve_inactive_conversations_enabled:
             this.autoResolveInactiveConversationsEnabled,
-          auto_resolve_inactive_conversations_minutes:
-            Number(this.autoResolveInactiveConversationsMinutes),
+          auto_resolve_inactive_conversations_minutes: Number(
+            this.autoResolveInactiveConversationsMinutes
+          ),
           auto_resolve_inactive_conversations_message:
             this.autoResolveInactiveConversationsMessage,
           options: { silent: true },
@@ -308,6 +335,35 @@ export default {
         useAlert(
           this.$t(
             'GENERAL_SETTINGS.FORM.AUTO_RESOLVE_INACTIVE_CONVERSATIONS.API.ERROR'
+          )
+        );
+      }
+    },
+
+    async updateAutoAssignUnassignedTeamConversationsSettings() {
+      try {
+        await this.$store.dispatch('accounts/update', {
+          auto_assign_unassigned_team_conversations_enabled:
+            this.autoAssignUnassignedTeamConversationsEnabled,
+          auto_assign_unassigned_team_conversations_interval_minutes: Number(
+            this.autoAssignUnassignedTeamConversationsIntervalMinutes
+          ),
+          auto_assign_unassigned_team_conversations_online_only:
+            this.autoAssignUnassignedTeamConversationsOnlineOnly,
+          auto_assign_unassigned_team_conversations_batch_limit: Number(
+            this.autoAssignUnassignedTeamConversationsBatchLimit
+          ),
+          options: { silent: true },
+        });
+        useAlert(
+          this.$t(
+            'GENERAL_SETTINGS.FORM.AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS.API.SUCCESS'
+          )
+        );
+      } catch (error) {
+        useAlert(
+          this.$t(
+            'GENERAL_SETTINGS.FORM.AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS.API.ERROR'
           )
         );
       }
@@ -448,7 +504,7 @@ export default {
     >
       <template #headerActions>
         <div class="flex justify-end">
-          <Switch
+          <NextSwitch
             v-model="clearLabelsOnResolved"
             @change="updateClearLabelsOnResolved"
           />
@@ -463,7 +519,7 @@ export default {
     >
       <template #headerActions>
         <div class="flex justify-end">
-          <Switch
+          <NextSwitch
             v-model="resolvedMessageEnabled"
             @change="updateResolvedMessageSettings"
           />
@@ -492,7 +548,7 @@ export default {
     >
       <template #headerActions>
         <div class="flex justify-end">
-          <Switch
+          <NextSwitch
             v-model="autoResolveInactiveConversationsEnabled"
             @change="updateAutoResolveInactiveConversationsSettings"
           />
@@ -529,6 +585,78 @@ export default {
             @blur="updateAutoResolveInactiveConversationsSettings"
           />
         </WithLabel>
+      </div>
+    </SectionLayout>
+    <SectionLayout
+      v-if="!uiFlags.isFetchingItem"
+      :title="
+        $t(
+          'GENERAL_SETTINGS.FORM.AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS.TITLE'
+        )
+      "
+      :description="
+        $t(
+          'GENERAL_SETTINGS.FORM.AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS.NOTE'
+        )
+      "
+      with-border
+    >
+      <template #headerActions>
+        <div class="flex justify-end">
+          <NextSwitch
+            v-model="autoAssignUnassignedTeamConversationsEnabled"
+            @change="updateAutoAssignUnassignedTeamConversationsSettings"
+          />
+        </div>
+      </template>
+      <div class="grid gap-4">
+        <WithLabel
+          name="auto-assign-unassigned-team-conversations-interval"
+          :label="
+            $t(
+              'GENERAL_SETTINGS.FORM.AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS.INTERVAL_LABEL'
+            )
+          "
+        >
+          <NextInput
+            v-model.number="
+              autoAssignUnassignedTeamConversationsIntervalMinutes
+            "
+            type="number"
+            min="1"
+            class="w-full"
+            @blur="updateAutoAssignUnassignedTeamConversationsSettings"
+          />
+        </WithLabel>
+        <WithLabel
+          name="auto-assign-unassigned-team-conversations-batch-limit"
+          :label="
+            $t(
+              'GENERAL_SETTINGS.FORM.AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS.BATCH_LIMIT_LABEL'
+            )
+          "
+        >
+          <NextInput
+            v-model.number="autoAssignUnassignedTeamConversationsBatchLimit"
+            type="number"
+            min="1"
+            class="w-full"
+            @blur="updateAutoAssignUnassignedTeamConversationsSettings"
+          />
+        </WithLabel>
+        <label class="flex items-center justify-between gap-3">
+          <span class="text-sm text-n-slate-12">
+            {{
+              $t(
+                'GENERAL_SETTINGS.FORM.AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS.ONLINE_ONLY_LABEL'
+              )
+            }}
+          </span>
+          <NextSwitch
+            v-model="autoAssignUnassignedTeamConversationsOnlineOnly"
+            @change="updateAutoAssignUnassignedTeamConversationsSettings"
+          />
+        </label>
       </div>
     </SectionLayout>
     <AudioTranscription v-if="showAudioTranscriptionConfig" />

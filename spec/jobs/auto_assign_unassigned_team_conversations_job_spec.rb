@@ -17,9 +17,7 @@ RSpec.describe AutoAssignUnassignedTeamConversationsJob, type: :job do
   end
 
   after do
-    Redis::Alfred.delete(Redis::Alfred::AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_LAST_RUN)
-    InstallationConfig.where(name: described_config_keys).delete_all
-    GlobalConfig.clear_cache
+    Redis::Alfred.delete(format(Redis::Alfred::AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_LAST_RUN, account_id: account.id))
   end
 
   describe '#perform' do
@@ -90,7 +88,6 @@ RSpec.describe AutoAssignUnassignedTeamConversationsJob, type: :job do
     end
 
     it 'skips when disabled' do
-      set_config('AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_ENABLED', false)
       conversation = create(:conversation, account: account, inbox: inbox, team: team, assignee: nil)
       create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming)
 
@@ -113,27 +110,13 @@ RSpec.describe AutoAssignUnassignedTeamConversationsJob, type: :job do
   end
 
   def enable_job(batch_limit: 100)
-    set_config('AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_ENABLED', true)
-    set_config('AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_INTERVAL_MINUTES', 15)
-    set_config('AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_ONLINE_ONLY', true)
-    set_config('AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_BATCH_LIMIT', batch_limit)
-  end
-
-  def set_config(name, value)
-    InstallationConfig.where(name: name).first_or_initialize.tap do |config|
-      config.value = value
-      config.locked = false
-      config.save!
-    end
-    GlobalConfig.clear_cache
-  end
-
-  def described_config_keys
-    %w[
-      AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_ENABLED
-      AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_INTERVAL_MINUTES
-      AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_ONLINE_ONLY
-      AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_BATCH_LIMIT
-    ]
+    account.update!(
+      settings: account.settings.merge(
+        'auto_assign_unassigned_team_conversations_enabled' => true,
+        'auto_assign_unassigned_team_conversations_interval_minutes' => 15,
+        'auto_assign_unassigned_team_conversations_online_only' => true,
+        'auto_assign_unassigned_team_conversations_batch_limit' => batch_limit
+      )
+    )
   end
 end

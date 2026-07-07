@@ -121,7 +121,9 @@ class Api::V1::AccountsController < Api::BaseController
     [:auto_resolve_after, :auto_resolve_message, :auto_resolve_ignore_waiting, :audio_transcriptions, :auto_resolve_label,
      :conversation_visibility_mode, :clear_labels_on_resolved, :resolved_message_enabled, :resolved_message_text,
      :auto_resolve_inactive_conversations_enabled, :auto_resolve_inactive_conversations_minutes,
-     :auto_resolve_inactive_conversations_message]
+     :auto_resolve_inactive_conversations_message, :auto_assign_unassigned_team_conversations_enabled,
+     :auto_assign_unassigned_team_conversations_interval_minutes, :auto_assign_unassigned_team_conversations_online_only,
+     :auto_assign_unassigned_team_conversations_batch_limit]
   end
 
   def check_signup_enabled

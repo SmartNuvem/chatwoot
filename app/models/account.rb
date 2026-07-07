@@ -50,6 +50,9 @@ class Account < ApplicationRecord
                                                        "Caso precise de algo, basta enviar uma nova mensagem.\n\n" \
                                                        "Atenciosamente,\nEquipe {{account.name}}".freeze
 
+  DEFAULT_AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_INTERVAL_MINUTES = 15
+  DEFAULT_AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_BATCH_LIMIT = 100
+
   validates :name, presence: true
   # `domain` is the inbound email domain used to construct reply addresses
   # (see `inbound_email_domain`). Do not repurpose it for a website or any
@@ -69,6 +72,10 @@ class Account < ApplicationRecord
   store_accessor :settings, :resolved_message_enabled, :resolved_message_text
   store_accessor :settings, :auto_resolve_inactive_conversations_enabled, :auto_resolve_inactive_conversations_minutes
   store_accessor :settings, :auto_resolve_inactive_conversations_message
+  store_accessor :settings, :auto_assign_unassigned_team_conversations_enabled
+  store_accessor :settings, :auto_assign_unassigned_team_conversations_interval_minutes
+  store_accessor :settings, :auto_assign_unassigned_team_conversations_online_only
+  store_accessor :settings, :auto_assign_unassigned_team_conversations_batch_limit
   store_accessor :settings, :captain_models, :captain_features
   store_accessor :settings, :reporting_timezone
   store_accessor :settings, :keep_pending_on_bot_failure
@@ -128,6 +135,9 @@ class Account < ApplicationRecord
     left_joins(:inboxes)
       .where("(settings ->> 'auto_resolve_inactive_conversations_enabled') = 'true' OR inboxes.auto_resolve_inactive_conversations_enabled = TRUE")
       .distinct
+  }
+  scope :with_auto_assign_unassigned_team_conversations, lambda {
+    where("(settings ->> 'auto_assign_unassigned_team_conversations_enabled') = 'true'")
   }
 
   before_validation :validate_limit_keys
@@ -220,6 +230,31 @@ class Account < ApplicationRecord
       'auto_resolve_inactive_conversations_message',
       DEFAULT_AUTO_RESOLVE_INACTIVE_CONVERSATIONS_MESSAGE
     )
+  end
+
+  def auto_assign_unassigned_team_conversations_enabled?
+    ActiveModel::Type::Boolean.new.cast(auto_assign_unassigned_team_conversations_enabled)
+  end
+
+  def auto_assign_unassigned_team_conversations_online_only?
+    value = settings_value_or_default('auto_assign_unassigned_team_conversations_online_only', true)
+    ActiveModel::Type::Boolean.new.cast(value)
+  end
+
+  def auto_assign_unassigned_team_conversations_interval_minutes
+    value = settings_value_or_default(
+      'auto_assign_unassigned_team_conversations_interval_minutes',
+      DEFAULT_AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_INTERVAL_MINUTES
+    ).to_i
+    value.positive? ? value : DEFAULT_AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_INTERVAL_MINUTES
+  end
+
+  def auto_assign_unassigned_team_conversations_batch_limit
+    value = settings_value_or_default(
+      'auto_assign_unassigned_team_conversations_batch_limit',
+      DEFAULT_AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_BATCH_LIMIT
+    ).to_i
+    value.positive? ? value : DEFAULT_AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_BATCH_LIMIT
   end
 
   def locale_english_name

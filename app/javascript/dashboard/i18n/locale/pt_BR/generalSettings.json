@@ -153,6 +153,17 @@
           "ERROR": "Falha ao atualizar configuração de resolução automática por inatividade"
         }
       },
+      "AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS": {
+        "TITLE": "Atribuir automaticamente conversas em time sem agente",
+        "NOTE": "Quando ativado, conversas abertas em um time, mas sem agente atribuido, tentarao periodicamente ser atribuidas a um agente do proprio time.",
+        "INTERVAL_LABEL": "Intervalo de nova tentativa em minutos",
+        "BATCH_LIMIT_LABEL": "Maximo de conversas por execucao",
+        "ONLINE_ONLY_LABEL": "Considerar apenas agentes online",
+        "API": {
+          "SUCCESS": "Configuracao de atribuicao automatica de conversas sem agente atualizada com sucesso",
+          "ERROR": "Falha ao atualizar configuracao de atribuicao automatica de conversas sem agente"
+        }
+      },
       "AUTO_RESOLVE_DURATION": {
         "LABEL": "Tempo de inatividade para resolução",
         "HELP": "Tempo de inatividade após o qual a conversa deve ser encerrada automaticamente",

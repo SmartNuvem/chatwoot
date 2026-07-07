@@ -1,15 +1,13 @@
 class AutoAssignUnassignedTeamConversationsJob < ApplicationJob
   queue_as :scheduled_jobs
 
-  DEFAULT_INTERVAL_MINUTES = 15
-  DEFAULT_BATCH_LIMIT = 100
-
   def perform
-    return unless enabled?
-    return unless claim_interval
+    Account.with_auto_assign_unassigned_team_conversations.find_each do |account|
+      next unless claim_interval(account)
 
-    eligible_conversations.each do |conversation|
-      process_conversation(conversation)
+      eligible_conversations(account).each do |conversation|
+        process_conversation(account, conversation)
+      end
     end
   rescue StandardError => e
     Rails.logger.error "[AutoAssignUnassignedTeamConversationsJob] failed: #{e.class.name} #{e.message}"
@@ -18,14 +16,14 @@ class AutoAssignUnassignedTeamConversationsJob < ApplicationJob
 
   private
 
-  def process_conversation(conversation)
+  def process_conversation(account, conversation)
     Rails.logger.info log_message('found unassigned team conversation', conversation)
 
     result = AutoAssignment::AssignmentService
              .new(inbox: conversation.inbox)
              .perform_for_unassigned_team_conversation(
                conversation,
-               require_online_agents: require_online_agents?
+               require_online_agents: account.auto_assign_unassigned_team_conversations_online_only?
              )
 
     log_result(conversation, result)
@@ -44,8 +42,8 @@ class AutoAssignUnassignedTeamConversationsJob < ApplicationJob
     end
   end
 
-  def eligible_conversations
-    Conversation
+  def eligible_conversations(account)
+    account.conversations
       .open
       .unassigned
       .where.not(team_id: nil)
@@ -56,41 +54,16 @@ class AutoAssignUnassignedTeamConversationsJob < ApplicationJob
       )
       .includes(:inbox)
       .reorder(last_activity_at: :asc, created_at: :asc)
-      .limit(batch_limit)
+      .limit(account.auto_assign_unassigned_team_conversations_batch_limit)
   end
 
-  def claim_interval
+  def claim_interval(account)
     ::Redis::Alfred.set(
-      ::Redis::Alfred::AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_LAST_RUN,
+      format(::Redis::Alfred::AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_LAST_RUN, account_id: account.id),
       Time.current.to_i,
       nx: true,
-      ex: interval_minutes.minutes
+      ex: account.auto_assign_unassigned_team_conversations_interval_minutes.minutes
     )
-  end
-
-  def enabled?
-    boolean_config('AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_ENABLED', false)
-  end
-
-  def require_online_agents?
-    boolean_config('AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_ONLINE_ONLY', true)
-  end
-
-  def interval_minutes
-    integer_config('AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_INTERVAL_MINUTES', DEFAULT_INTERVAL_MINUTES, minimum: 1)
-  end
-
-  def batch_limit
-    integer_config('AUTO_ASSIGN_UNASSIGNED_TEAM_CONVERSATIONS_BATCH_LIMIT', DEFAULT_BATCH_LIMIT, minimum: 1)
-  end
-
-  def boolean_config(key, default)
-    ActiveModel::Type::Boolean.new.cast(GlobalConfigService.load(key, default.to_s))
-  end
-
-  def integer_config(key, default, minimum:)
-    value = GlobalConfigService.load(key, default.to_s).to_i
-    value >= minimum ? value : default
   end
 
   def log_message(message, conversation)
